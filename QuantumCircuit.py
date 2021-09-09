@@ -13,6 +13,24 @@ from WaveModule import QubitChannel
 class QuantumCircuit(object):
 
     def __init__(self, qubit={}, blockNum=1, readout={}):
+        """
+        Create a timeline of quantum circuit diagram.
+
+        Parameters
+        ----------
+        qubit : dict/list, optional
+            Qubit control channel assignment. For dict type the argument uses
+            {qubit name : qubit index, ...} format, while for list type is
+            [qubit name, ...] as the indices have the same order as the list.
+            The default is {}.
+        blockNum : int, optional
+            Number of time indices. The default is 1.
+        readout : dict/list, optional
+            Similar to qubit for special readout purposes. The index order can
+            be mixed with qubit in dict mode while the in list mode the index
+            order is always later than qubit ones. The default is {}.
+
+        """
         self.diagram = np.asarray(
             [[np.nan] * blockNum] * (len(qubit) + len(readout)),
             dtype=object
