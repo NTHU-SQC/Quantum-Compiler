@@ -14,6 +14,7 @@ from copy import deepcopy
 from scipy.signal import welch
 from scipy.fft import fft, ifft, fftfreq, fftshift
 
+
 class GenericWave():
     EFF_FREQ_DIGIT = 5
     EFF_TIME_DIGIT = 5 + 9
@@ -334,7 +335,7 @@ class GenericWave():
             ]
         if dBm_scale:
             ydict_list[0]['label'] = 'amplitude (dBm/Hz)'
-        return self.__class__.draw(xdict, ydict_list, 'PSD', size=[20, 3])
+        return self.__class__.draw(xdict, ydict_list, 'PSD')
 
     @classmethod
     def axis(cls, name='', label='', data=np.array([]), log_bool=False):
@@ -1582,4 +1583,8 @@ class QubitChannel(GenericWave):
 
 
 if __name__ == '__main__':
-    help(Wave.toWaveform)
+    import shape_functionV4 as sf
+    marker = ~Wave(sf.square, [sf.get_x(10e-6), 0, 2e-6])
+    a = marker.offset(3e-6)
+    a.plot()
+    pass

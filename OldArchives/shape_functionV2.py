@@ -10,7 +10,7 @@ Create the following functions to build waveform
 import numpy as np
 
 
-def get_x(span=.0, sampling_rate=1e9, delEnd=True):
+def get_x(span=.0, points=0):
     """
     Formatted timeline creation.
 
@@ -18,24 +18,15 @@ def get_x(span=.0, sampling_rate=1e9, delEnd=True):
     ----------
     span : float, optional
         Overall length of timeline. The default is .0.
-    sampling_rate : float, optional
-        Sampling rate for DAC. The default is 1e9 (Suggested).
-    delEnd : boolean, optional
-        Delete the last point. The default is True.
+    points : float, optional
+        Number of points. The default is 0.
 
     Returns
     -------
     numpy.array
 
     """
-    #span = round(span, int(np.log10(sampling_rate)))
-    # points = int(span * sampling_rate + 1)
-    points = int(round(span*sampling_rate, 3))+1
-    x = np.linspace(0, points-1, points)/sampling_rate
-    end = None
-    if delEnd:
-        end = -1
-    return x[:end]
+    return np.linspace(0, span, points)
 
 
 def gaussian(x, peak_x=.0, sigma=1.0, name=''):
@@ -62,7 +53,7 @@ def gaussian(x, peak_x=.0, sigma=1.0, name=''):
     x = x.astype(np.float)
     variables = {'function': gaussian, 'peak_x': peak_x, 'sigma': sigma}
     y = np.exp((-1 * (x - peak_x)**2) / (2 * sigma**2))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, [False, False], name)
 
 
 def const(x, setOne=True, name=''):
@@ -90,7 +81,7 @@ def const(x, setOne=True, name=''):
     if setOne:
         offset += 1
     y = np.zeros(x.size) + offset
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, [False, False], name)
 
 
 def exp_rising(x, peak_x=0.0, tau=1.0, name=''):
@@ -119,7 +110,7 @@ def exp_rising(x, peak_x=0.0, tau=1.0, name=''):
     y = np.concatenate((
         np.exp((x[x <= peak_x] - peak_x) / tau), np.zeros(x[x > peak_x].size)
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, [False, False], name)
 
 
 def exp_falling(x, peak_x=0.0, tau=1.0, name=''):
@@ -148,7 +139,7 @@ def exp_falling(x, peak_x=0.0, tau=1.0, name=''):
     y = np.concatenate((
         np.zeros(x[x < peak_x].size), np.exp((peak_x - x[x >= peak_x]) / tau)
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, [False, False], name)
 
 
 def gaussian_square(x, first_peak_x=5.0, flat=10.0, sigma=1.0, name=''):
@@ -186,7 +177,7 @@ def gaussian_square(x, first_peak_x=5.0, flat=10.0, sigma=1.0, name=''):
             x[x > first_peak_x + flat], x[x > first_peak_x + flat][0], sigma
             )['y']
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, [False, False], name)
 
 
 def exp_square(x, first_peak_x=5.0, flat=10.0, tau=1.0, name=''):
@@ -224,7 +215,7 @@ def exp_square(x, first_peak_x=5.0, flat=10.0, tau=1.0, name=''):
             x[x > first_peak_x + flat], x[x > first_peak_x + flat][0], tau
             )['y']
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, [False, False], name)
 
 
 def sine(x, period=10.0, start_phase=0.0, name=''):
@@ -362,7 +353,7 @@ def square(x, start=.0, flat=1.0, name=''):
         np.ones(x[np.logical_and(x >= start, x <= start + flat)].size),
         np.zeros(x[x > start + flat].size)
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, [False, False], name)
 
 
 def packer(x, y, variables={}, appendRule=[False, False], name=''):
@@ -397,4 +388,4 @@ def packer(x, y, variables={}, appendRule=[False, False], name=''):
 
 
 if __name__ == '__main__':
-    a = get_x(3.93e-06)
+    pass

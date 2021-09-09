@@ -8,8 +8,8 @@ Created on Sat Apr 24 20:18:43 2021
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
-from scipy import stats
-import scipy.signal
+from scipy.signal import welch
+from scipy.fft import fft, ifft, fftfreq
 
 
 class GenericWave():
@@ -298,28 +298,24 @@ class GenericWave():
         """
         return plt.plot(self.x, self.y)
 
-    def cycdiff(self, order=1, ratio=100):
+    def diff(self, n=1):
         """
-        Perform y derivation with periodic boundary conditions.
+        Calculate y derivative using fft method
 
         Parameters
         ----------
-        order : int, optional
-            Order of derivative. The default is 1.
-        ratio : float, optional
-            Range of filtering (number of std values). The default is 100.
+        n : int, optional
+            order of differentiation. The default is 1.
 
         Returns
         -------
         numpy.array
-            Derivative.
+            y derivative of n-th order.
 
         """
-        arr = self.get_y()
-        derivative = np.diff(arr, order, append=arr[0: order]) / self.dx
-        mode = stats.mode(derivative)[0][0]
-        std = np.std(derivative)
-        return np.clip(derivative, mode-std*ratio, mode+std*ratio)
+        N = len(self.x)
+        f = fftfreq(N, self.dx)
+        return ifft((1j*2*np.pi*f)**n*fft(self.y)).real
 
     def fft(self):
         """
@@ -341,7 +337,7 @@ class GenericWave():
         """
         nfft = len(self)  # fft size same as signal size
         sample_rate = 1 / self.dx
-        f, Pxx_den = scipy.signal.welch(
+        f, Pxx_den = welch(
             self.get_y(), fs=sample_rate, window=np.ones(nfft),
             nperseg=nfft, scaling='density'
             )

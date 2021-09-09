@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import copy
 from scipy import stats
-import scipy.signal
+from scipy.signal import welch
 
 
 class GenericWave():
@@ -341,7 +341,7 @@ class GenericWave():
         """
         nfft = len(self)  # fft size same as signal size
         sample_rate = 1 / self.dx
-        f, Pxx_den = scipy.signal.welch(
+        f, Pxx_den = welch(
             self.get_y(), fs=sample_rate, window=np.ones(nfft),
             nperseg=nfft, scaling='density'
             )
