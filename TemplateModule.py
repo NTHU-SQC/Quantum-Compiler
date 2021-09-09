@@ -317,7 +317,7 @@ class GenericWave(object):
         """
         xdict = self.xaxis
         ydict_list = [{
-            'name': self._name, 'label': 'amplitude',
+            'name': self.name, 'label': 'amplitude',
             'data': self.y, 'log': False
             }]
         if plotDataOnly:
@@ -360,9 +360,8 @@ class GenericWave(object):
 
         """
         nfft = len(self)  # fft size same as signal size
-        df = 1 / self.dx
         f, Pxx_den = welch(
-            self.y, fs=df, window=np.ones(nfft),
+            self.y, fs=self.df, window=np.ones(nfft),
             nperseg=nfft, scaling='density'
             )
         if dBm_scale:
@@ -386,7 +385,7 @@ class GenericWave(object):
         """
         f, PSD = self.psd(dBm_scale)
         xdict = axis('', 'frequency (Hz)', f, False)
-        ydict_list = [axis(self._name, 'amplitude (Mag/Hz)', PSD, False)]
+        ydict_list = [axis(self.name, 'amplitude (Mag/Hz)', PSD, False)]
         if dBm_scale:
             ydict_list[0]['label'] = 'amplitude (dBm/Hz)'
         if plotDataOnly:

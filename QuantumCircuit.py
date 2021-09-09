@@ -12,13 +12,32 @@ from WaveModule import QubitChannel
 
 class QuantumCircuit(object):
 
-    def __init__(self, qubitNames=[], blockNum=1, readoutNames=[]):
+    def __init__(self, qubit={}, blockNum=1, readout={}):
         self.diagram = np.asarray(
-            [[np.nan] * blockNum] * (len(qubitNames) + len(readoutNames)),
+            [[np.nan] * blockNum] * (len(qubit) + len(readout)),
             dtype=object
             )
-        self._qubitNames = qubitNames
-        self._readoutNames = readoutNames
+        # check datatype and assign
+        if isinstance(qubit, list):
+            self._qubitDict = dict(zip(qubit, range(len(qubit))))
+        elif isinstance(qubit, dict):
+            self._qubitDict = qubit
+        else:
+            raise TypeError('qubitDict: Unsupported format')
+        if isinstance(readout, list):
+            self._readoutDict = dict(
+                zip(readout, np.arange(len(readout)) + len(qubit))
+                )
+        elif isinstance(readout, dict):
+            self._readoutDict = readout
+        else:
+            raise TypeError('readoutDict: Unsupported format')
+        # index check
+        for key, val in {**self._qubitDict, **self._readoutDict}.items():
+            if val > len(self.diagram[:, 0]):
+                raise ValueError(
+                    'Found ' + str(key) + ' out of bound: ' + str(val)
+                    )
         self._name = ''
 
     @property
@@ -30,24 +49,24 @@ class QuantumCircuit(object):
         self._name = name
 
     @property
-    def qubitNames(self):
-        return self._qubitNames
+    def qubitDict(self):
+        return self._qubitDict
 
-    @qubitNames.setter
-    def qubitNames(self, qubitNames=[]):
-        if len(self._qubitNames) != len(qubitNames):
+    @qubitDict.setter
+    def qubitDict(self, qubit={}):
+        if len(self._qubitDict) != len(qubit):
             raise ValueError('Name field size mismatched')
-        self._qubitNames = qubitNames
+        self._qubitDict = qubit
 
     @property
-    def readoutNames(self):
-        return self._readoutNames
+    def readoutDict(self):
+        return self._readoutDict
 
-    @readoutNames.setter
-    def readoutNames(self, readoutNames=[]):
-        if len(self._readoutNames) != len(readoutNames):
+    @readoutDict.setter
+    def readoutDict(self, readout={}):
+        if len(self._readoutDict) != len(readout):
             raise ValueError('Name field size mismatched')
-        self._readoutNames = readoutNames
+        self._readoutDict = readout
 
     def assign(self, gateObj, mapping):
         """
@@ -57,12 +76,12 @@ class QuantumCircuit(object):
         ----------
         gateObj : Gate or QubitChannel
             Gate or QubitChannel object.
-        mapping : dict or tuple
+        mapping : dict or list
             The datatype determines how the gateObj is assigned:
                 dict -> name-index pair for Gate object assignment. The 'name'
                     key is the name of the QubitChannel object and the 'index'
                     value is the corresponding indices in the circuit diagram.
-                tuple -> indices for single QubitChannel object assignment.
+                list -> indices for single QubitChannel object assignment.
 
         Returns
         -------
@@ -70,37 +89,35 @@ class QuantumCircuit(object):
 
         """
         if isinstance(mapping, dict):
-            for key, idx in mapping.items():
-                blockNum = idx - len(self.diagram[0, :]) + 1
+            for key, idx_tag in mapping.items():
+                qubitIdx = self.get_index(idx_tag[0])
+                blockNum = idx_tag[1] - len(self.diagram[0, :]) + 1
                 if blockNum > 0:
                     self.diagram = np.concatenate((
                         self.diagram, np.asarray(
-                            [[np.nan] * blockNum] * (
-                                len(self._qubitNames) + len(self._readoutNames)
-                                )
+                            [[np.nan] * blockNum] * len(self.diagram[:, 0])
                             )
                         ), axis=1)
-                self.diagram[idx] = gateObj._qubitDict[key]
+                self.diagram[qubitIdx, idx_tag[1]] = gateObj._qubitDict[key]
         else:
+            qubitIdx = self.get_index(mapping[0])
             blockNum = mapping[1] - len(self.diagram[0, :]) + 1
             if blockNum > 0:
                 self.diagram = np.concatenate((
                     self.diagram, np.asarray(
-                        [[np.nan] * blockNum] * (
-                            len(self._qubitNames) + len(self._readoutNames)
-                            )
+                        [[np.nan] * blockNum] * len(self.diagram[:, 0])
                         )
                     ), axis=1)
-            self.diagram[mapping] = gateObj
+            self.diagram[qubitIdx, mapping[1]] = gateObj
 
-    def get_qubit_index(self, qubit_name):
+    def get_index(self, qubit_name):
         """
-        Get the index of the qubit according to its name.
+        Get the index of the qubit/readout according to its name.
 
         Parameters
         ----------
-        qubit_name : str
-            Name of the qubit.
+        qubit_name : str, int
+            Name of the qubit. Return the input if the input is an int.
 
         Returns
         -------
@@ -108,10 +125,12 @@ class QuantumCircuit(object):
             Qubit index.
 
         """
+        if isinstance(qubit_name, int):
+            return qubit_name
         try:
-            return self._qubitNames.index(qubit_name)
-        except ValueError:
-            return self._readoutNames.index(qubit_name)
+            return self.qubitDict[qubit_name]
+        except KeyError:
+            return self.readoutDict[qubit_name]
 
     def compileCkt(self):
         """
@@ -128,15 +147,21 @@ class QuantumCircuit(object):
         row_bool = np.bitwise_or.reduce(table, axis=0)
         diagram = self.diagram[:, row_bool]
         table = table[:, row_bool]
+        # align QubitChannel objects in the table column by column
+        for time_idx in range(len(table[0, :])):
+            diagram[table[:, time_idx], time_idx
+                    ] = QubitChannel.alignQubitChannels(
+                        *diagram[table[:, time_idx], time_idx]
+                        )
         # replace nans with null QubitChannel objects
         for qubit_idx in range(len(diagram[:, 0])):
             for time_idx in range(len(diagram[0, :])):
                 if table[qubit_idx, time_idx]:
                     continue
-                span_idx = np.where(f(diagram[qubit_idx, :]))[0][0]
-                wire_idx = np.where(f(diagram[:, time_idx]))[0][0]
+                span_idx = np.where(f(diagram[:, time_idx]))[0][0]
+                wire_idx = np.where(f(diagram[qubit_idx, :]))[0][0]
                 diagram[qubit_idx, time_idx] = QubitChannel.null(
-                    diagram[qubit_idx, span_idx], diagram[wire_idx, time_idx]
+                    diagram[span_idx, time_idx], diagram[qubit_idx, wire_idx]
                     )
         self.compiled = np.sum(diagram, axis=1)
 
@@ -156,7 +181,7 @@ class QuantumCircuit(object):
 
         """
         if isinstance(qubit, str):
-            qubit = self.get_qubit_index(qubit)
+            qubit = self.get_index(qubit)
         return self.compiled[qubit].y
 
     @classmethod
@@ -208,15 +233,25 @@ class QuantumCircuit(object):
 if __name__ == '__main__':
     from shape_functionV4 import gaussian, get_x
     from WaveModule import Wave, Waveform
+    from TemplateModule import GenericGate
     a = Wave(gaussian, [get_x(10e-6), 5e-6, 1e-6])
     b = Waveform(Waveform._nullBlock(a.span*2))
+    b1 = ~(b+b+~a)
+    b2 = ~(~a+b+~a+b)
     c = ~b / ~a
-    kk = QuantumCircuit(['a', 'b', 'c'], 10)
+    c.name = 'c'
+    # kk = QuantumCircuit({'a': 0, 'b': 1, 'c': 2}, 10, ['readout'])
+    kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
     kk.assign(c, (0, 0))
     kk.assign(c, (1, 0))
-    # kk.assign(c, (2, 0))
-    kk.assign(c, (0, 5))
-    kk.assign(c, (2, 5))
+    z = GenericGate(c)
+    kk.assign(z, {'c': (0, 11)})
+    kk.assign(b1, (0, 5))
+    kk.assign(b2, (2, 5))
+    kk.assign(z, {'c': ('readout', 10)})
+    kk.assign(z, {'c': ('c', 9)})
+    kk.assign(z, {'c': ('c', 8)})
 
     kk.compileCkt()
+    print(kk@'c')
     pass

@@ -28,8 +28,6 @@ def get_x(span=.0, sampling_rate=1e9, delEnd=True):
     numpy.array
 
     """
-    #span = round(span, int(np.log10(sampling_rate)))
-    # points = int(span * sampling_rate + 1)
     points = int(round(span*sampling_rate, 3))+1
     x = np.linspace(0, points-1, points)/sampling_rate
     end = None
@@ -397,4 +395,4 @@ def packer(x, y, variables={}, appendRule=[False, False], name=''):
 
 
 if __name__ == '__main__':
-    a = get_x(3.93e-06)
+    a = get_x(10e-06)

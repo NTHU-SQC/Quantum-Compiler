@@ -92,16 +92,15 @@ class Wave(tpm.GenericWave):
 
     def __invert__(self):
         """
-        Shorthand conversion for toWaveform() method. The overlapping mode is
-        set to enabled. Denoted as ~self.
+        Shorthand conversion to waveform object. Denoted as ~self.
 
         Returns
         -------
         Waveform
-             Object with a new reference.
+            New waveform object.
 
         """
-        return self.toWaveform()
+        return Waveform([self], self.name)
 
     def __pos__(self):
         """
@@ -126,11 +125,11 @@ class Wave(tpm.GenericWave):
              Object with a new reference.
 
         """
-        properties = {'name': self._name,
+        properties = {'name': self.name,
                       'variables': self.variables,
-                      'y': self._y[::-1],
-                      'x': self._x,
-                      'appendRule': self._appendRule
+                      'y': self.y[::-1],
+                      'x': self.x,
+                      'appendRule': self.appendRule
                       }
         return Wave(properties=properties)
 
@@ -150,11 +149,11 @@ class Wave(tpm.GenericWave):
 
         """
         if not isinstance(waveObj, Wave):
-            properties = {'name': self._name,
+            properties = {'name': self.name,
                           'variables': self.variables,
-                          'y': self._y + waveObj,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+                          'y': self.y + waveObj,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
         variables = {
@@ -164,16 +163,16 @@ class Wave(tpm.GenericWave):
             shorter = self
         else:
             shorter = [obj for obj in [self, waveObj] if obj is not longer][0]
-        x, length = longer._x, len(shorter)
+        x, length = longer.x, len(shorter)
         y = np.concatenate((
-            longer._y[:length] + shorter._y[:length], longer._y[length:]
+            longer.y[:length] + shorter.y[:length], longer.y[length:]
             ))
-        properties = {'name': self._name,
+        properties = {'name': self.name,
                       'variables': variables,
                       'x': x,
                       'y': y,
                       'appendRule': [i or j for i, j in zip(
-                                      self._appendRule, waveObj._appendRule
+                                      self.appendRule, waveObj.appendRule
                                       )]
                       }
         return Wave(properties=properties)
@@ -199,11 +198,11 @@ class Wave(tpm.GenericWave):
 
         """
         if not isinstance(waveObj, Wave):
-            properties = {'name': self._name,
+            properties = {'name': self.name,
                           'variables': self.variables,
-                          'y': self._y - waveObj,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+                          'y': self.y - waveObj,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
         variables = {
@@ -213,16 +212,16 @@ class Wave(tpm.GenericWave):
             shorter = self
         else:
             shorter = [obj for obj in [self, waveObj] if obj is not longer][0]
-        x, length = longer._x, len(shorter)
+        x, length = longer.x, len(shorter)
         y = np.concatenate((
-            longer._y[:length] - shorter._y[:length], longer._y[length:]
+            longer.y[:length] - shorter.y[:length], longer.y[length:]
             ))
-        properties = {'name': self._name,
+        properties = {'name': self.name,
                       'variables': variables,
                       'x': x,
                       'y': y,
                       'appendRule': [i or j for i, j in zip(
-                                      self._appendRule, waveObj._appendRule
+                                      self.appendRule, waveObj.appendRule
                                       )]
                       }
         return Wave(properties=properties)
@@ -248,11 +247,11 @@ class Wave(tpm.GenericWave):
 
         """
         if not isinstance(waveObj, Wave):
-            properties = {'name': self._name,
+            properties = {'name': self.name,
                           'variables': self.variables,
-                          'y': self._y * waveObj,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+                          'y': self.y * waveObj,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
         variables = {
@@ -263,16 +262,16 @@ class Wave(tpm.GenericWave):
             shorter = self
         else:
             shorter = [obj for obj in [self, waveObj] if obj is not longer][0]
-        x, length = longer._x, len(shorter)
+        x, length = longer.x, len(shorter)
         y = np.concatenate((
-            longer._y[:length] * shorter._y[:length], longer._y[length:]
+            longer.y[:length] * shorter.y[:length], longer.y[length:]
             ))
-        properties = {'name': self._name,
+        properties = {'name': self.name,
                       'variables': variables,
                       'x': x,
                       'y': y,
                       'appendRule': [i or j for i, j in zip(
-                                      self._appendRule, waveObj._appendRule
+                                      self.appendRule, waveObj.appendRule
                                       )]
                       }
         return Wave(properties=properties)
@@ -298,11 +297,11 @@ class Wave(tpm.GenericWave):
 
         """
         if not isinstance(number, Wave):
-            properties = {'name': self._name,
+            properties = {'name': self.faxisname,
                           'variables': self.variables,
-                          'y': self._y / number,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+                          'y': self.y / number,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
         else:
@@ -340,25 +339,13 @@ class Wave(tpm.GenericWave):
             Object with a new reference.
 
         """
-        properties = {'name': self._name,
+        properties = {'name': self.name,
                       'variables': self.variables,
-                      'y': abs(self._y),
-                      'x': self._x,
-                      'appendRule': self._appendRule
+                      'y': abs(self.y),
+                      'x': self.x,
+                      'appendRule': self.appendRule
                       }
         return Wave(properties=properties)
-
-    def toWaveform(self):
-        """
-        Shorthand conversion to waveform object.
-
-        Returns
-        -------
-        Waveform
-            New waveform object.
-
-        """
-        return Waveform([self], self._name)
 
 
 class Waveform(tpm.GenericWave):
@@ -460,15 +447,15 @@ class Waveform(tpm.GenericWave):
 
     def __invert__(self):
         """
-        Shorthand conversion for toQubitChannel() method. Denoted as ~self.
+        Shorthand conversion to QubitChannel object. Denoted as ~self.
 
         Returns
         -------
         QubitChannel
-             Object with a new reference.
+            New QubitChannel object.
 
         """
-        return self.toQubitChannel()
+        return QubitChannel(self)
 
     def __add__(self, waveObjList):
         """
@@ -743,18 +730,6 @@ class Waveform(tpm.GenericWave):
                     span, samp_rate, [longer.appendRule[0], True])
                 shorter.waveList = addList + shorter.waveList
 
-    def toQubitChannel(self):
-        """
-        Shorthand conversion to QubitChannel object.
-
-        Returns
-        -------
-        QubitChannel
-            New QubitChannel object.
-
-        """
-        return QubitChannel(self)
-
     def offset(self, offset=0.):
         """
         Backend function to offset the first or the last Wave object in a
@@ -864,8 +839,8 @@ class Waveform(tpm.GenericWave):
         offset = 0
         for waveObj in waveList:
             if x.size == 0:
-                y = waveObj._y
-                x = waveObj._x
+                y = waveObj.y
+                x = waveObj.x
                 if x.size == 0:
                     continue
                 try:
@@ -878,19 +853,19 @@ class Waveform(tpm.GenericWave):
             rightRule = waveObj.appendRule[0]
             if leftRule ^ rightRule:
                 if leftRule:
-                    y = np.hstack([y, waveObj._y[1:]])
+                    y = np.hstack([y, waveObj.y[1:]])
                 else:
-                    y = np.hstack([y[:-1], waveObj._y])
-                x = np.hstack([x, waveObj._x[1:] + offset])
+                    y = np.hstack([y[:-1], waveObj.y])
+                x = np.hstack([x, waveObj.x[1:] + offset])
             else:
                 if leftRule:
-                    y = np.hstack([y, waveObj._y])
-                    x = np.hstack([x, waveObj._x + offset + waveObj.dx])
+                    y = np.hstack([y, waveObj.y])
+                    x = np.hstack([x, waveObj.x + offset + waveObj.dx])
                 else:
                     y = np.hstack([y[:-1],
-                                   np.array([(y[-1] + waveObj._y[0])/2]),
-                                   waveObj._y[1:]])
-                    x = np.hstack([x, waveObj._x[1:] + offset])
+                                   np.array([(y[-1] + waveObj.y[0])/2]),
+                                   waveObj.y[1:]])
+                    x = np.hstack([x, waveObj.x[1:] + offset])
             offset = x[-1]
             previous = waveObj
         return y, np.round(x, cls.EFF_TIME_DIGIT)
@@ -942,19 +917,19 @@ class QubitChannel(tpm.GenericWave):
 
         """
         self._wires = np.array(waveforms)
-        self._wire_names = [waveform._name for waveform in self._wires]
+        self._wire_names = [waveform.name for waveform in self._wires]
         self.__class__.align(self)
         self._name = ''
 
     # set self.x, self.y non-default attributes for backward compatibility
     @property
     def x(self):
-        self._x = self._wires[0]._x
+        self._x = self._wires[0].x
         return self._x
 
     @property
     def y(self):
-        self._y = [waveform._y for waveform in self._wires]
+        self._y = [waveform.y for waveform in self._wires]
         return self._y
 
     @property
@@ -1160,10 +1135,10 @@ class QubitChannel(tpm.GenericWave):
         ydict_list = [{}] * len(wire_indices)
         for idx, i in zip(wire_indices, range(len(wire_indices))):
             ydict_list[i] = tpm.axis(
-                self._wire_names[idx], 'amplitude', self._wires[idx]._y, False
+                self._wire_names[idx], 'amplitude', self._wires[idx].y, False
                 )
         if not figure_name:
-            figure_name = self._name
+            figure_name = self.name
         return tpm.draw(
             self.xaxis, ydict_list, figure_name=figure_name, size=size
             )
