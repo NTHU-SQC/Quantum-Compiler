@@ -1,2 +1,2 @@
-# NTHU HoiQEL Quantum-Compiler2021
-Create a variety of arbitrary waveforms
+# NTHU HoiQEL Quantum-Compiler
+Create arbitrary waveforms and construct quantum circuit wiring
