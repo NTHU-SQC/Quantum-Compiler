@@ -60,7 +60,7 @@ def gaussian(x, peak_x=.0, sigma=1.0, name=''):
     x = x.astype(np.float)
     variables = {'function': gaussian, 'peak_x': peak_x, 'sigma': sigma}
     y = np.exp((-1 * (x - peak_x)**2) / (2 * sigma**2))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def const(x, setOne=True, name=''):
@@ -88,7 +88,7 @@ def const(x, setOne=True, name=''):
     if setOne:
         offset += 1
     y = np.zeros(x.size) + offset
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def exp_rising(x, peak_x=0.0, tau=1.0, name=''):
@@ -117,7 +117,7 @@ def exp_rising(x, peak_x=0.0, tau=1.0, name=''):
     y = np.concatenate((
         np.exp((x[x <= peak_x] - peak_x) / tau), np.zeros(x[x > peak_x].size)
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def exp_falling(x, peak_x=0.0, tau=1.0, name=''):
@@ -146,7 +146,7 @@ def exp_falling(x, peak_x=0.0, tau=1.0, name=''):
     y = np.concatenate((
         np.zeros(x[x < peak_x].size), np.exp((peak_x - x[x >= peak_x]) / tau)
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def gaussian_square(x, first_peak_x=5.0, flat=10.0, sigma=1.0, name=''):
@@ -184,7 +184,7 @@ def gaussian_square(x, first_peak_x=5.0, flat=10.0, sigma=1.0, name=''):
             x[x > first_peak_x + flat], x[x > first_peak_x + flat][0], sigma
             )['y']
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def exp_square(x, first_peak_x=5.0, flat=10.0, tau=1.0, name=''):
@@ -222,7 +222,7 @@ def exp_square(x, first_peak_x=5.0, flat=10.0, tau=1.0, name=''):
             x[x > first_peak_x + flat], x[x > first_peak_x + flat][0], tau
             )['y']
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def sine(x, period=10.0, start_phase=0.0, name=''):
@@ -250,7 +250,7 @@ def sine(x, period=10.0, start_phase=0.0, name=''):
     variables = {
             'function': sine, 'period': period, 'start_phase': start_phase}
     y = np.sin(2*np.pi*(x / period) + start_phase)
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def sine2(x, frequency=10.0, start_phase=0.0, name=''):
@@ -281,7 +281,7 @@ def sine2(x, frequency=10.0, start_phase=0.0, name=''):
             'start_phase': start_phase
             }
     y = np.sin(2 * np.pi * frequency * x + start_phase)
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
 def cosine(x, period=10.0, start_phase=0.0, name=''):
@@ -360,10 +360,10 @@ def square(x, start=.0, flat=1.0, name=''):
         np.ones(x[np.logical_and(x >= start, x <= start + flat)].size),
         np.zeros(x[x > start + flat].size)
         ))
-    return packer(x, y, variables, [True, True], name)
+    return packer(x, y, variables, name=name)
 
 
-def packer(x, y, variables={}, appendRule=[False, False], name=''):
+def packer(x, y, variables={}, appendRule=[True, True], name=''):
     """
     Given x, y ,create a corresponding dictionary package.
 
