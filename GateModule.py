@@ -8,7 +8,7 @@ for set / get vs IDE:
 @author: Alaster
 """
 
-import shape_functionV4 as sf
+import shape_functionV5 as sf
 import TemplateModule as tpm
 import WaveModule as wt
 import numpy as np

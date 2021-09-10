@@ -149,6 +149,12 @@ class QuantumCircuit(object):
             return self.qubitDict[qubit_name]
         except KeyError:
             return self.readoutDict[qubit_name]
+        
+    def view(self):
+        f = np.vectorize(
+            lambda x: x.__str__() if isinstance(x, QubitChannel) else None
+            )
+        return f(self.diagram)
 
     def compileCkt(self):
         """
@@ -181,7 +187,10 @@ class QuantumCircuit(object):
                 diagram[qubit_idx, time_idx] = QubitChannel.null(
                     diagram[span_idx, time_idx], diagram[qubit_idx, wire_idx]
                     )
-        self.compiled = np.sum(diagram, axis=1)
+        try:
+            self.compiled = np.sum(diagram, axis=1)
+        except SystemError:
+            raise ValueError('Error during wire concatenation')
 
     def __matmul__(self, qubit):
         """
@@ -249,7 +258,7 @@ class QuantumCircuit(object):
 
 
 if __name__ == '__main__':
-    from shape_functionV4 import gaussian, get_x
+    from shape_functionV5 import gaussian, get_x
     from WaveModule import Wave, Waveform
     from TemplateModule import GenericGate
     a = Wave(gaussian, [get_x(10e-6), 5e-6, 1e-6])
@@ -257,18 +266,20 @@ if __name__ == '__main__':
     b1 = ~(b+b+~a)
     b2 = ~(~a+b+~a+b)
     c = ~b / ~a
+    b1.name='b1'
+    b2.name='b2'
     c.name = 'c'
-    # kk = QuantumCircuit({'a': 0, 'b': 1, 'c': 2}, 10, ['readout'])
+    # kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
     kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
     kk.assign(c, (0, 0))
     kk.assign(c, (1, 0))
     z = GenericGate(c)
     kk.assign(z, {'c': (0, 11)})
-    kk.assign(b1, (0, 5))
+    kk.assign(b1, (2, 8))
     kk.assign(b2, (2, 5))
     kk.assign(z, {'c': ('readout', 10)})
-    kk.assign(z, {'c': ('c', 9)})
-    kk.assign(z, {'c': ('c', 8)})
+    kk.assign(z, {'c': ('readout', 9)})
+    kk.assign(z, {'c': ('readout', 8)})
 
     kk.compileCkt()
     print(kk@'c')

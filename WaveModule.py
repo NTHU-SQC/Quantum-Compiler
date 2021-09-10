@@ -83,9 +83,11 @@ class Wave(tpm.GenericWave):
                         neglecting the last point (fisrt wave) and keeping the
                         first point (second wave).
                 wave(True) + wave(True) => Appending without overlapping while
-                        both the last point (fisrt wave) and the first point
-                        (second wave) are kept with an addition offset dx is
-                        set between them.
+                        both the last 2nd point (fisrt wave) and the first
+                        point (second wave) are kept with an addition offset dx
+                        is set between them. In this mode the last point of the
+                        first wave is always neglected to preserve total span
+                        consistency.
 
         """
         self._appendRule = appendRule
@@ -501,8 +503,8 @@ class Waveform(tpm.GenericWave):
 
     def __rshift__(self, offset):
         """
-        Shorthand operator for self.offset() with add_tail=False. Denoted
-        as self >> waveform.
+        Shorthand operator for self.offset() with positive offset. Denoted
+        as self >> offset.
 
         Parameters
         ----------
@@ -515,7 +517,7 @@ class Waveform(tpm.GenericWave):
             Offsetted result with a new reference.
 
         """
-        return self.offset(offset, add_tail=False)
+        return self.offset(offset)
 
     def __irshift__(self, waveform):
         """
@@ -537,8 +539,8 @@ class Waveform(tpm.GenericWave):
 
     def __lshift__(self, offset):
         """
-        Shorthand operator for self.offset() with add_tail=True. Denoted as
-        self << waveform.
+        Shorthand operator for self.offset() with negative offset. Denoted as
+        self << offset.
 
         Parameters
         ----------
@@ -551,7 +553,7 @@ class Waveform(tpm.GenericWave):
             Offsetted result with a new reference.
 
         """
-        return self.offset(offset, add_tail=True)
+        return self.offset(-offset)
 
     def __ilshift__(self, waveform):
         """
@@ -706,9 +708,11 @@ class Waveform(tpm.GenericWave):
             addListB = self.__class__._nullBlock(
                 waveform.span, samp_rate, waveform.appendRule)
             if use_1st_head:
+                # print('T-F')
                 self.waveList = addListB + self.waveList
                 waveform.waveList = waveform.waveList + addListA
             else:
+                # print('F-T')
                 self.waveList = self.waveList + addListB
                 waveform.waveList = addListA + waveform.waveList
         else:
@@ -718,14 +722,12 @@ class Waveform(tpm.GenericWave):
             longer = max(self, waveform)
             shorter = min(self, waveform)
             if use_1st_head:
-                if not shorter.appendRule[-1]:
-                    span += self.dx
+                # print('T-T')
                 addList = self.__class__._nullBlock(
                     span, samp_rate, [True, longer.appendRule[-1]])
                 shorter.waveList = shorter.waveList + addList
             else:
-                if not shorter.appendRule[0]:
-                    span += self.dx
+                # print('F-F')
                 addList = self.__class__._nullBlock(
                     span, samp_rate, [longer.appendRule[0], True])
                 shorter.waveList = addList + shorter.waveList
@@ -745,37 +747,36 @@ class Waveform(tpm.GenericWave):
         None.
 
         """
+        offset = round(offset, self.__class__.EFF_TIME_DIGIT)
         if abs(offset) < self.dx:
             return self
         span = abs(offset)
         samp_rate = self.df
         if offset > 0:
-            if not self.appendRule[0]:
-                span += self.dx
             return Waveform(
-                self.__class__._nullBlock(span, samp_rate, [True, True]) +
-                self.waveList
+                self.__class__._nullBlock(
+                    span, samp_rate, [self.appendRule[0], False]
+                    ) + self.waveList
                 )
         else:
-            if not self.appendRule[-1]:
-                span += self.dx
             return Waveform(
-                self.waveList +
-                self.__class__._nullBlock(span, samp_rate, [True, True])
+                self.waveList + self.__class__._nullBlock(
+                    span, samp_rate, [False, self.appendRule[-1]]
+                    )
                 )
 
     def fill_total_point(self, total_point=0):
         add_point = total_point - len(self)
         if add_point <= 0:
             return self
-        return self.offset(-add_point * self.dx)
+        span = round((add_point + 1) * self.dx, self.__class__.EFF_TIME_DIGIT)
+        return self << span
 
     @classmethod
     def _nullBlock(cls,
                    span=.0,
                    sampling_rate=1e9,
-                   appendRule=[True, True],
-                   delEnd=True):
+                   appendRule=[False, False]):
         """
         Generate 0s to fill up empty space.
 
@@ -800,18 +801,14 @@ class Waveform(tpm.GenericWave):
         variables = {'function': cls._nullBlock,
                      'sampling_rate': sampling_rate,
                      'span': span}
-        end = None
-        if delEnd:
-            end = -1
-        x = np.linspace(0, span, points)[:end]
         return [Wave(properties={'name': 'null',
                                  'variables': variables,
-                                 'x': x,
-                                 'y': np.zeros(x.size),
+                                 'x': np.linspace(0, span, points),
+                                 'y': np.zeros(points),
                                  'appendRule': appendRule})]
 
     @classmethod
-    def _synthesize(cls, waveList):
+    def _synthesize(cls, waveList):######10
         """
         Modded in V6
         Backend function to compile the list of Wave objects into a complete
@@ -837,38 +834,48 @@ class Waveform(tpm.GenericWave):
         y = np.array([])
         x = np.array([])
         offset = 0
+        delEnd = 0
         for waveObj in waveList:
-            if x.size == 0:
+            if waveObj.x.size == 0: # skip null waves
+                continue
+            if x.size == 0: # initial null filling
                 y = waveObj.y
                 x = waveObj.x
-                if x.size == 0:
-                    continue
-                try:
-                    offset = x[-1]
-                except(IndexError):
-                    offset = 0
+                offset = x[-1]
                 previous = waveObj
                 continue
+            # concatenate according to appendrules
             leftRule = previous.appendRule[1]
             rightRule = waveObj.appendRule[0]
+            if leftRule and rightRule:
+                delEnd = 1
             if leftRule ^ rightRule:
                 if leftRule:
-                    y = np.hstack([y, waveObj.y[1:]])
+                    # print('T-F')
+                    y = np.hstack([y[:len(y)-delEnd], waveObj.y[1:]])
                 else:
-                    y = np.hstack([y[:-1], waveObj.y])
-                x = np.hstack([x, waveObj.x[1:] + offset])
+                    # print('F-T')
+                    y = np.hstack([y[:-1-delEnd], waveObj.y])
+                x = np.hstack([x[:len(x)-delEnd], waveObj.x[1:] + offset])
             else:
                 if leftRule:
-                    y = np.hstack([y, waveObj.y])
-                    x = np.hstack([x, waveObj.x + offset + waveObj.dx])
+                    # print('T-T')
+                    y = np.hstack([y[:len(y)-delEnd], waveObj.y])
+                    x = np.hstack(
+                        [x[:len(x)-delEnd], waveObj.x + offset]
+                        )
                 else:
-                    y = np.hstack([y[:-1],
-                                   np.array([(y[-1] + waveObj.y[0])/2]),
+                    # print('F-F')
+                    y = np.hstack([y[:-1-delEnd],
+                                   np.array([(y[-1-delEnd] + waveObj.y[0])/2]),
                                    waveObj.y[1:]])
-                    x = np.hstack([x, waveObj.x[1:] + offset])
+                    x = np.hstack([x[:len(x)-delEnd], waveObj.x[1:] + offset])
             offset = x[-1]
             previous = waveObj
-        return y, np.round(x, cls.EFF_TIME_DIGIT)
+            delEnd = 0
+        return y[:len(y)-delEnd], np.round(
+            x[:len(x)-delEnd], cls.EFF_TIME_DIGIT
+            )
 
     @classmethod
     def _toWaveObjList(cls, waveform):
@@ -921,7 +928,6 @@ class QubitChannel(tpm.GenericWave):
         self.__class__.align(self)
         self._name = ''
 
-    # set self.x, self.y non-default attributes for backward compatibility
     @property
     def x(self):
         self._x = self._wires[0].x
@@ -993,9 +999,9 @@ class QubitChannel(tpm.GenericWave):
 
         """
         return f"name: {self.name}\n" + \
-            f"wires: {self._wires}\n" + \
             f"wire names: {self._wire_names}\n" + \
-            f"dx: {self.dx}\n" + \
+            f"point number: {len(self)}\n" + \
+            f"span: {self.span}\n" + \
             f"ID: {id(self)}"
 
     def __add__(self, qcObj):
@@ -1013,6 +1019,8 @@ class QubitChannel(tpm.GenericWave):
             Appended QubitChannel object with a new reference.
 
         """
+        if len(self._wires) != len(qcObj._wires):
+            raise ValueError('Wire concatenation with unequal size arrays')
         temp = QubitChannel(*(self._wires + qcObj._wires))
         temp.wire_names = self.wire_names
         return temp
@@ -1302,4 +1310,11 @@ class QubitChannel(tpm.GenericWave):
 
 
 if __name__ == '__main__':
-    pass
+    from shape_functionV5 import gaussian, get_x
+    a = Wave(gaussian, [get_x(10e-6), 5e-6, 1e-6])
+    # b = Waveform(Waveform._nullBlock(a.span*2))
+    b = Wave(gaussian, [get_x(20e-6), 5e-6, 1e-6])
+    a.appendRule = [True, True]
+    b.appendRule = [False, False]
+    c = ~a + ~b
+    d = QubitChannel(~a, ~b, c)

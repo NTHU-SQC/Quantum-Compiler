@@ -81,7 +81,7 @@ class GenericWave(object):
     @property
     def span(self):
         return round(
-            self.x[-1] - self.x[0] + self.dx, self.__class__.EFF_TIME_DIGIT
+            self.x[-1] - self.x[0], self.__class__.EFF_TIME_DIGIT
             )
 
     @property
