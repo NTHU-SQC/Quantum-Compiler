@@ -8,6 +8,7 @@ Created on Wed Sep  8 19:34:12 2021
 import numpy as np
 import pickle
 from WaveModule import QubitChannel
+from copy import deepcopy
 
 
 class QuantumCircuit(object):
@@ -43,19 +44,23 @@ class QuantumCircuit(object):
         else:
             raise TypeError('qubitDict: Unsupported format')
         if isinstance(readout, list):
-            self._readoutDict = dict(
-                zip(readout, np.arange(len(readout)) + len(qubit))
-                )
+            used_idx = [val for _, val in self._qubitDict.items()]
+            unused_idx = sorted([
+                val for val in range(len(readout) + len(qubit))
+                if val not in used_idx
+                ])
+            self._readoutDict = dict(zip(readout, unused_idx))
         elif isinstance(readout, dict):
             self._readoutDict = readout
         else:
             raise TypeError('readoutDict: Unsupported format')
         # index check
         for key, val in {**self._qubitDict, **self._readoutDict}.items():
-            if val > len(self.diagram[:, 0]):
+            if val >= len(self.diagram[:, 0]):
                 raise ValueError(
-                    'Found ' + str(key) + ' out of bound: ' + str(val)
-                    )
+                    f'QubitChannel \'{key}\' assignment out of bound with ' +
+                    f'index: {val}'
+                        )
         self._name = ''
 
     @property
@@ -106,6 +111,7 @@ class QuantumCircuit(object):
         None.
 
         """
+        copied = deepcopy(gateObj)
         if isinstance(mapping, dict):
             for key, idx_tag in mapping.items():
                 qubitIdx = self.get_index(idx_tag[0])
@@ -116,7 +122,7 @@ class QuantumCircuit(object):
                             [[np.nan] * blockNum] * len(self.diagram[:, 0])
                             )
                         ), axis=1)
-                self.diagram[qubitIdx, idx_tag[1]] = gateObj._qubitDict[key]
+                self.diagram[qubitIdx, idx_tag[1]] = copied._qubitDict[key]
         else:
             qubitIdx = self.get_index(mapping[0])
             blockNum = mapping[1] - len(self.diagram[0, :]) + 1
@@ -126,7 +132,7 @@ class QuantumCircuit(object):
                         [[np.nan] * blockNum] * len(self.diagram[:, 0])
                         )
                     ), axis=1)
-            self.diagram[qubitIdx, mapping[1]] = gateObj
+            self.diagram[qubitIdx, mapping[1]] = copied
 
     def get_index(self, qubit_name):
         """
@@ -149,12 +155,32 @@ class QuantumCircuit(object):
             return self.qubitDict[qubit_name]
         except KeyError:
             return self.readoutDict[qubit_name]
-        
+
     def view(self):
         f = np.vectorize(
-            lambda x: x.__str__() if isinstance(x, QubitChannel) else None
+            lambda x: x.__str__() if isinstance(x, QubitChannel) else str(
+                np.nan
+                )
             )
-        return f(self.diagram)
+        data = f(self.diagram)
+        namefield = np.array([['']] * len(self.diagram[:, 0]), dtype=object)
+        for key, val in {**self.qubitDict, **self.readoutDict}.items():
+            namefield[val] = key + f':{val}'
+        data = np.hstack([namefield, data])
+        timeindex = np.array(
+            [''] + list(range(len(self.diagram[0, :]))), dtype=object
+            )
+        data = np.array(np.vstack([timeindex, data]), dtype=str)
+
+        from tkinter import Tk, Label
+        # from tkinter.ttk import *
+        w = Tk()
+        for i, row in enumerate(data):
+            for j, item in enumerate(row):
+                Label(
+                    w, text=item, font='Consolas', borderwidth=1,
+                    ).grid(row=i, column=j, ipadx=10, ipady=10)
+        w.mainloop()
 
     def compileCkt(self):
         """
@@ -178,9 +204,9 @@ class QuantumCircuit(object):
                         *diagram[table[:, time_idx], time_idx]
                         )
         # replace nans with null QubitChannel objects
-        for qubit_idx in range(len(diagram[:, 0])):
-            for time_idx in range(len(diagram[0, :])):
-                if table[qubit_idx, time_idx]:
+        for qubit_idx, row in enumerate(table):
+            for time_idx, flag in enumerate(row):
+                if flag:
                     continue
                 span_idx = np.where(f(diagram[:, time_idx]))[0][0]
                 wire_idx = np.where(f(diagram[qubit_idx, :]))[0][0]
@@ -266,11 +292,11 @@ if __name__ == '__main__':
     b1 = ~(b+b+~a)
     b2 = ~(~a+b+~a+b)
     c = ~b / ~a
-    b1.name='b1'
-    b2.name='b2'
+    b1.name = 'b1'
+    b2.name = 'b2'
     c.name = 'c'
-    # kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
-    kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
+    kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
+    # kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
     kk.assign(c, (0, 0))
     kk.assign(c, (1, 0))
     z = GenericGate(c)
@@ -281,6 +307,8 @@ if __name__ == '__main__':
     kk.assign(z, {'c': ('readout', 9)})
     kk.assign(z, {'c': ('readout', 8)})
 
+    kk.view()
     kk.compileCkt()
-    print(kk@'c')
+    # print(kk@'c')
+    kk.view()
     pass
