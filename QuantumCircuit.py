@@ -172,14 +172,15 @@ class QuantumCircuit(object):
             )
         data = np.array(np.vstack([timeindex, data]), dtype=str)
 
-        from tkinter import Tk, Label
+        from tkinter import Tk, Label, N, E, W, S
         # from tkinter.ttk import *
         w = Tk()
         for i, row in enumerate(data):
             for j, item in enumerate(row):
                 Label(
-                    w, text=item, font='Consolas', borderwidth=1,
-                    ).grid(row=i, column=j, ipadx=10, ipady=10)
+                    w, text=item, font='Consolas',
+                    borderwidth=1, relief='solid'
+                    ).grid(row=i, column=j, ipadx=5, ipady=5, sticky=N+E+W+S)
         w.mainloop()
 
     def compileCkt(self):
@@ -295,8 +296,8 @@ if __name__ == '__main__':
     b1.name = 'b1'
     b2.name = 'b2'
     c.name = 'c'
-    kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
-    # kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
+    # kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
+    kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
     kk.assign(c, (0, 0))
     kk.assign(c, (1, 0))
     z = GenericGate(c)
