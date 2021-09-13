@@ -11,8 +11,11 @@ from copy import deepcopy
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+import tkinter
+from tkinter import filedialog
 
 
+# Plotting module
 def axis(name='', label='', data=np.array([]), log_bool=False):
     return {'name': name, 'label': label, 'data': data, 'log': log_bool}
 
@@ -65,6 +68,90 @@ def draw(xdict={}, ydict_list=[], figure_name='', titleFontSize=20,
     fig.tight_layout()
     plt.show()
     return fig
+
+
+# Storage module
+def save(ext, *args):
+    """
+    Save objects to files with specified extension.
+
+    Parameters
+    ----------
+    ext : str
+        File extension.
+    *args : Storable class
+        Instances belong to any children class of Storable.
+
+    """
+    for i, obj in enumerate(args):
+        if obj.name == '':
+            obj.name = input(
+                f'Empty name string for {i}th item, set object name:'
+                )
+        with open(f'{obj.name}' + ext, 'wb') as f:
+            pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+
+def load(ext, *args):
+    """
+    Load object from files with 2 methods: The 'dialog' mode using a dialog
+    box to import filenames while 'arg' mode using file names given in
+    *args. The mode is specified by ext variable.
+
+    Parameters
+    ----------
+    cls : Storable class
+        Class of instances with 'name' attribute.
+    ext : str
+        Determine whether loading file using dialog box or straightforward
+        filenames in *args:
+            'dialog' mode   : ext=''
+            'arg' mode      : ext='.[extension]'
+    *args : String
+        Filenames to be imported when using 'arg' mode.
+
+    Returns
+    -------
+    object
+        Loaded objects in tuple.
+
+    """
+    if ext:
+        args = get_path(ext, 'Select object files')
+
+    objList = []
+    for filename in args:
+        with open(filename, 'rb') as f:
+            objList += [pickle.load(f)]
+    return *objList,
+
+
+def get_path(ext='', title='Select item'):
+    """
+    Get absolute path using dialogue box.
+
+    Parameters
+    ----------
+    cls : Storable
+        Storable class.
+    ext : str, optional
+        File extension. The default is ''.
+    title : Box title, optional
+        Box title. The default is 'Select item'.
+
+    Returns
+    -------
+    tuple
+        tuple of absolute paths.
+
+    """
+    root = tkinter.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    return filedialog.askopenfilenames(
+        parent=root,
+        filetypes=[(ext.upper() + ' Files', ext)],
+        title=title)
 
 
 class GenericWave(object):
@@ -394,48 +481,11 @@ class GenericWave(object):
 
     @classmethod
     def save(cls, *args):
-        """
-        Save GenericWave object to .wtobj files.
-
-        Parameters
-        ----------
-        cls : GenericWave class
-            GenericWave class.
-        *args : GenericWave
-            Object to be saved.
-
-        """
-        for i, gwObj in enumerate(args):
-            if gwObj.name == '':
-                gwObj.name = input(
-                    'Empty name string for {i}th item, set object name:'
-                    )
-            with open(f'{gwObj.name}.wtobj', 'wb') as f:
-                pickle.dump(gwObj, f, pickle.HIGHEST_PROTOCOL)
+        save('.wf', *args)
 
     @classmethod
     def load(cls, *args):
-        """
-        Load GenericWave object from .wtobj files.
-
-        Parameters
-        ----------
-        cls : GenericWave class
-            GenericWave class.
-        *args : String
-            Filename.
-
-        Returns
-        -------
-        GenericWave
-            Loaded objects.
-
-        """
-        objList = []
-        for filename in args:
-            with open(filename, 'rb') as f:
-                objList += [pickle.load(f)]
-        return *objList,
+        return load('.wf', *args)
 
 
 class GenericGate(object):
@@ -492,45 +542,8 @@ class GenericGate(object):
 
     @classmethod
     def save(cls, *args):
-        """
-        Save GenericGate object to .gate files.
-
-        Parameters
-        ----------
-        cls : GenericGate class
-            GenericGate class.
-        *args : GenericGate
-            Object to be saved.
-
-        """
-        for i, gwObj in enumerate(args):
-            if gwObj.name == '':
-                gwObj.name = input(
-                    'Empty name string for {i}th item, set object name:'
-                    )
-            with open(f'{gwObj.name}.gate', 'wb') as f:
-                pickle.dump(gwObj, f, pickle.HIGHEST_PROTOCOL)
+        save('.gate', *args)
 
     @classmethod
     def load(cls, *args):
-        """
-        Load GenericGate object from .gate files.
-
-        Parameters
-        ----------
-        cls : GenericGate class
-            GenericGate class.
-        *args : String
-            Filename.
-
-        Returns
-        -------
-        GenericGate
-            Loaded objects.
-
-        """
-        objList = []
-        for filename in args:
-            with open(filename, 'rb') as f:
-                objList += [pickle.load(f)]
-        return *objList,
+        return load('.gate', *args)

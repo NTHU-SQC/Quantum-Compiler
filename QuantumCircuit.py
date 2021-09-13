@@ -6,8 +6,8 @@ Created on Wed Sep  8 19:34:12 2021
 """
 
 import numpy as np
-import pickle
 from WaveModule import QubitChannel
+from TemplateModule import save, load
 from copy import deepcopy
 
 
@@ -240,48 +240,11 @@ class QuantumCircuit(object):
 
     @classmethod
     def save(cls, *args):
-        """
-        Save QuantumCircuit object to .qckt files.
-
-        Parameters
-        ----------
-        cls : QuantumCircuit class
-            QuantumCircuit class.
-        *args : QuantumCircuit
-            Object to be saved.
-
-        """
-        for i, gwObj in enumerate(args):
-            if gwObj.name == '':
-                gwObj.name = input(
-                    'Empty name string for {i}th item, set object name:'
-                    )
-            with open(f'{gwObj.name}.qckt', 'wb') as f:
-                pickle.dump(gwObj, f, pickle.HIGHEST_PROTOCOL)
+        save('.qckt', *args)
 
     @classmethod
     def load(cls, *args):
-        """
-        Load QuantumCircuit object from .qckt files.
-
-        Parameters
-        ----------
-        cls : QuantumCircuit class
-            QuantumCircuit class.
-        *args : String
-            Filename.
-
-        Returns
-        -------
-        QuantumCircuit
-            Loaded objects.
-
-        """
-        objList = []
-        for filename in args:
-            with open(filename, 'rb') as f:
-                objList += [pickle.load(f)]
-        return *objList,
+        return load('.qckt', *args)
 
 
 if __name__ == '__main__':
