@@ -2,13 +2,27 @@
 """
 Created on Wed Sep  8 19:34:12 2021
 
+Ref:
+set window size:
+    https://pythonexamples.org/python-tkinter-set-window-size/
+embedding matplotlib plot inside tkinter label:
+    https://stackoverflow.com/questions/67648380
+scrolling a group of widgets:
+    https://sodocumentation.net/tkinter/topic/8931/scrolling-widgets
+    
+Bug:
+1.tkinter "_tkinter.TclError: image "pyimage9" doesn't exist":
+    https://stackoverflow.com/questions/25460418
+
 @author: Alaster
 """
 
 import numpy as np
 from WaveModule import QubitChannel
-from TemplateModule import save, load
+from TemplateModule import save, load, simple_scrollable_window
 from copy import deepcopy
+from tkinter import Label
+from PIL import ImageTk, Image
 
 
 class QuantumCircuit(object):
@@ -156,7 +170,7 @@ class QuantumCircuit(object):
         except KeyError:
             return self.readoutDict[qubit_name]
 
-    def view(self):
+    def view(self, windowSize='800x600'):
         f = np.vectorize(
             lambda x: x.__str__() if isinstance(x, QubitChannel) else str(
                 np.nan
@@ -171,17 +185,39 @@ class QuantumCircuit(object):
             [''] + list(range(len(self.diagram[0, :]))), dtype=object
             )
         data = np.array(np.vstack([timeindex, data]), dtype=str)
-
-        from tkinter import Tk, Label, N, E, W, S
-        # from tkinter.ttk import *
-        w = Tk()
+        # create a scrollable window
+        _, fm, run = simple_scrollable_window(windowSize)
         for i, row in enumerate(data):
             for j, item in enumerate(row):
                 Label(
-                    w, text=item, font='Consolas',
-                    borderwidth=1, relief='solid'
-                    ).grid(row=i, column=j, ipadx=5, ipady=5, sticky=N+E+W+S)
-        w.mainloop()
+                    fm, text=item, font='Consolas',
+                    relief='solid', borderwidth=1
+                    ).grid(row=i, column=j, ipadx=5, ipady=5, sticky='news')
+        run()
+
+    def plot(self, windowSize='800x600'):
+        if not hasattr(self, 'compiled'):
+            raise RuntimeError('The object has not compiled yet')
+        # create a scrollable window
+        _, fm, run = simple_scrollable_window(windowSize)
+        count = 0
+        img_ref = []
+        for key, val in {**self.qubitDict, **self.readoutDict}.items():
+            Label(
+                fm, text=key + f':{val}', font='Consolas',
+                relief='solid', borderwidth=1
+                ).grid(row=count, column=0, ipadx=5, ipady=5, sticky='news')
+            img_data = self.compiled[val].plot(
+                allInOne=False, toByteStream=True, showSizeInfo=False,
+                size=[20, 4]
+                )
+            render = ImageTk.PhotoImage(Image.open(img_data))
+            img_ref += [render]
+            img = Label(fm, image = render, borderwidth=1, relief='solid')
+            img.grid(row=count, column=1, ipadx=5, ipady=5, sticky='news')
+            img.image = render
+            count += 1
+        run()
 
     def compileCkt(self):
         """
@@ -259,7 +295,8 @@ if __name__ == '__main__':
     b1.name = 'b1'
     b2.name = 'b2'
     c.name = 'c'
-    # kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
+    # c.plot(allInOne=False)
+    kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
     kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
     kk.assign(c, (0, 0))
     kk.assign(c, (1, 0))
@@ -271,8 +308,9 @@ if __name__ == '__main__':
     kk.assign(z, {'c': ('readout', 9)})
     kk.assign(z, {'c': ('readout', 8)})
 
-    kk.view()
+    # kk.view()
     kk.compileCkt()
+    kk.plot()
     # print(kk@'c')
-    kk.view()
+    # kk.view()
     pass

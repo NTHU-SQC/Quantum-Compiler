@@ -808,7 +808,7 @@ class Waveform(tpm.GenericWave):
                                  'appendRule': appendRule})]
 
     @classmethod
-    def _synthesize(cls, waveList):######10
+    def _synthesize(cls, waveList):
         """
         Modded in V6
         Backend function to compile the list of Wave objects into a complete
@@ -836,9 +836,9 @@ class Waveform(tpm.GenericWave):
         offset = 0
         delEnd = 0
         for waveObj in waveList:
-            if waveObj.x.size == 0: # skip null waves
+            if waveObj.x.size == 0:  # skip null waves
                 continue
-            if x.size == 0: # initial null filling
+            if x.size == 0:  # initial null filling
                 y = waveObj.y
                 x = waveObj.x
                 offset = x[-1]
@@ -1121,7 +1121,14 @@ class QubitChannel(tpm.GenericWave):
         wires = np.insert(self._wires, wireIndex, nullblock)
         return QubitChannel(*wires)
 
-    def plot(self, wire_indices=[], size=[6.4, 4.8], figure_name=''):
+    def plot(self,
+             wire_indices=[],
+             size=[6.4, 4.8],
+             figure_name='',
+             allInOne=False,
+             toByteStream=False,
+             showSizeInfo=True
+             ):
         """
         A quick plot among wires of a QubitChannel object.
 
@@ -1148,44 +1155,10 @@ class QubitChannel(tpm.GenericWave):
         if not figure_name:
             figure_name = self.name
         return tpm.draw(
-            self.xaxis, ydict_list, figure_name=figure_name, size=size
+            self.xaxis, ydict_list, figure_name=figure_name, size=size,
+            allInOne=allInOne, toByteStream=toByteStream,
+            showSizeInfo=showSizeInfo
             )
-
-    def psdplot(self, wire_indices=[], size=[6.4, 4.8], dBm_scale=True):
-        """
-        Plot PSD of the signal.
-
-        Parameters
-        ----------
-        wire_indices : list, optional
-            List of indices of wires to be examined. The default is [].
-        size : list, optional
-            Size of each subplot. The default is [6.4, 4.8].
-        dBm_scale : boolean, optional
-            Show plot in dBm scale. The default is True.
-
-        Returns
-        -------
-        handle : matplotlib.lines.Line2D
-            Plot handler object.
-
-        """
-        if not wire_indices:
-            wire_indices = range(len(self._wires))
-        ydict_list = [{}] * len(wire_indices)
-        for idx, i in zip(wire_indices, range(len(wire_indices))):
-            f, PSD = self._wires[idx].psd(dBm_scale)
-            xdict = {
-                'name': '', 'label': 'frequency (Hz)',
-                'data': f, 'log': False
-                }
-            ydict_list[i] = {
-                'name': self._wire_names[idx], 'label': 'amplitude (Mag/Hz)',
-                'data': PSD, 'log': False
-                }
-            if dBm_scale:
-                ydict_list[i]['label'] = 'amplitude (dBm/Hz)'
-        return tpm.draw(xdict, ydict_list, 'PSD', size=size)
 
     @classmethod
     def align(cls, qcObj, ref=None):

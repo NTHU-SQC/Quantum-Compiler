@@ -12,7 +12,8 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import tkinter
-from tkinter import filedialog
+from tkinter import filedialog, Tk, Frame, Canvas, Scrollbar
+from io import BytesIO
 
 
 # Plotting module
@@ -20,8 +21,11 @@ def axis(name='', label='', data=np.array([]), log_bool=False):
     return {'name': name, 'label': label, 'data': data, 'log': log_bool}
 
 
-def draw(xdict={}, ydict_list=[], figure_name='', titleFontSize=20,
-         size=[6.4, 4.8]):
+def draw(
+        xdict={}, ydict_list=[],
+        figure_name='', titleFontSize=20,size=[6.4, 4.8],
+        allInOne=False, toByteStream=False, showSizeInfo=True
+        ):
     """
     Formatted plot generation. Dictionary format: dict = {name:str,
     label:str, data:numpy.array, log:bool}.
@@ -42,6 +46,13 @@ def draw(xdict={}, ydict_list=[], figure_name='', titleFontSize=20,
     size : list, optional
         List of subplot sizes in x- and y-axis, respectively. The default
         is [6.4, 4.8].
+    allInOne : bool, optional
+        Set True to put all traces into the same subplot. The default is False.
+    toByteStream : bool, optional
+        Set True to convert plot into byte stream without plotting. The default
+        is False. Ref: https://www.twblogs.net/a/5eb1097d86ec4d44378845b6
+    showSizeInfo : bool, optional
+        Set True to show plot size during plot creation. The default is True.
 
     Returns
     -------
@@ -51,24 +62,61 @@ def draw(xdict={}, ydict_list=[], figure_name='', titleFontSize=20,
     """
     if not xdict:
         xdict = axis(data=range(len(ydict_list[0]['data'])))
-    num_plot = len(ydict_list)
+    num_plot = 1 if allInOne else len(ydict_list)
     fig = plt.figure(figsize=[size[0], size[1] * num_plot])
     fig.suptitle(figure_name, fontsize=titleFontSize, fontweight="bold")
-    for i in range(num_plot):
-        ax = plt.subplot(num_plot, 1, i+1)
+    for i in range(len(ydict_list)):
+        if i == 0 or (i > 0 and not allInOne):
+            ax = plt.subplot(num_plot, 1, i+1)
         plt.plot(xdict['data'], ydict_list[i]['data'])
+        if allInOne and i > 0:  # do not update x,y labels for allInOne mode
+            continue
         plt.xlabel(xdict['label'])
         plt.ylabel(ydict_list[i]['label'])
-        ax.legend([ydict_list[i]['name']], loc="best")
         if xdict['log']:
             ax.set_xscale('log')
         if ydict_list[i]['log']:
             ax.set_yscale('log')
-    print("plot size=[" + str(size[0]) + "," + str(size[1]) + "]")
+        if allInOne:    # do not update legend for allInOne mode
+            continue
+        ax.legend([ydict_list[i]['name']], loc="best")
+    if allInOne:
+        ax.legend([ydict['name'] for ydict in ydict_list], loc="best")
+    if showSizeInfo:
+        print("plot size=[" + str(size[0]) + "," + str(size[1]) + "]")
     fig.tight_layout()
+    if toByteStream:
+        byte_data = BytesIO()
+        plt.savefig(byte_data)  # save plot to byte stream
+        plt.close()  # close plot to disable showing plot
+        return byte_data
     plt.show()
     return fig
 
+# Window module
+def simple_scrollable_window(windowSize='800x600'):
+    w = Tk()
+    w.geometry(windowSize)
+    cvs = Canvas(w)
+    # set up scroall bar
+    scrol_y = Scrollbar(w, orient='vertical', command=cvs.yview)
+    scrol_y.pack(fill='y', side='right')
+    scrol_x = Scrollbar(w, orient='horizontal', command=cvs.xview)
+    scrol_x.pack(fill='x', side='bottom')
+    # create image grid
+    fm = Frame(cvs)
+    
+    def run():
+        cvs.create_window(0, 0, anchor='nw', window=fm)
+        cvs.update_idletasks()
+        cvs.configure(
+            scrollregion=cvs.bbox('all'),
+            xscrollcommand=scrol_x.set, yscrollcommand=scrol_y.set
+            )
+        cvs.pack(fill='both', expand=True, side='left')
+        w.mainloop()
+    
+    return w, fm, run
 
 # Storage module
 def save(ext, *args):
@@ -392,7 +440,7 @@ class GenericWave(object):
         """
         return np.array([np.interp(x, self.x, self.y) for x in xList])
 
-    def plot(self, figure_name='', plotDataOnly=False):
+    def plot(self, figure_name='', toByteStream=False):
         """
         Plot y v.s. x.
 
@@ -407,9 +455,7 @@ class GenericWave(object):
             'name': self.name, 'label': 'amplitude',
             'data': self.y, 'log': False
             }]
-        if plotDataOnly:
-            return xdict, ydict_list, figure_name
-        return draw(xdict, ydict_list, figure_name)
+        return draw(xdict, ydict_list, figure_name, toByteStream=toByteStream)
 
     def diff(self, n=1):
         """
@@ -455,7 +501,7 @@ class GenericWave(object):
             return f, 10.0 * np.log10(Pxx_den)
         return f, Pxx_den
 
-    def psdplot(self, dBm_scale=True, plotDataOnly=False):
+    def psdplot(self, dBm_scale=True, toByteStream=False):
         """
         Plot PSD of the signal.
 
@@ -475,9 +521,7 @@ class GenericWave(object):
         ydict_list = [axis(self.name, 'amplitude (Mag/Hz)', PSD, False)]
         if dBm_scale:
             ydict_list[0]['label'] = 'amplitude (dBm/Hz)'
-        if plotDataOnly:
-            return xdict, ydict_list, 'PSD'
-        return draw(xdict, ydict_list, 'PSD')
+        return draw(xdict, ydict_list, 'PSD', toByteStream=toByteStream)
 
     @classmethod
     def save(cls, *args):
