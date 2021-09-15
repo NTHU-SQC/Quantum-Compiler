@@ -1283,11 +1283,4 @@ class QubitChannel(tpm.GenericWave):
 
 
 if __name__ == '__main__':
-    from shape_functionV5 import gaussian, get_x
-    a = Wave(gaussian, [get_x(10e-6), 5e-6, 1e-6])
-    # b = Waveform(Waveform._nullBlock(a.span*2))
-    b = Wave(gaussian, [get_x(20e-6), 5e-6, 1e-6])
-    a.appendRule = [True, True]
-    b.appendRule = [False, False]
-    c = ~a + ~b
-    d = QubitChannel(~a, ~b, c)
+    pass

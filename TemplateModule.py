@@ -18,12 +18,32 @@ from io import BytesIO
 
 # Plotting module
 def axis(name='', label='', data=np.array([]), log_bool=False):
+    """
+    Create an uniform interface to plot data with matplotlib.
+
+    Parameters
+    ----------
+    name : str, optional
+        Name of numpy array. The default is ''.
+    label : str, optional
+        Name or description of axis. The default is ''.
+    data : numpy.array, optional
+        Data array. The default is np.array([]).
+    log_bool : bool, optional
+        Toggle True to enable logarithmic scale. The default is False.
+
+    Returns
+    -------
+    dict
+        A dictionary of settings that to be fed into draw() function.
+
+    """
     return {'name': name, 'label': label, 'data': data, 'log': log_bool}
 
 
 def draw(
         xdict={}, ydict_list=[],
-        figure_name='', titleFontSize=20,size=[6.4, 4.8],
+        figure_name='', titleFontSize=20, size=[6.4, 4.8],
         allInOne=False, toByteStream=False, showSizeInfo=True
         ):
     """
@@ -56,8 +76,8 @@ def draw(
 
     Returns
     -------
-    fig : matplotlib.lines.Line2D
-        Figure object.
+    fig/BytesIO : matplotlib.lines.Line2D or BytesIO object
+        Figure of byte stream object.
 
     """
     if not xdict:
@@ -93,6 +113,7 @@ def draw(
     plt.show()
     return fig
 
+
 # Window module
 def simple_scrollable_window(windowSize='800x600'):
     w = Tk()
@@ -105,7 +126,7 @@ def simple_scrollable_window(windowSize='800x600'):
     scrol_x.pack(fill='x', side='bottom')
     # create image grid
     fm = Frame(cvs)
-    
+
     def run():
         cvs.create_window(0, 0, anchor='nw', window=fm)
         cvs.update_idletasks()
@@ -115,8 +136,8 @@ def simple_scrollable_window(windowSize='800x600'):
             )
         cvs.pack(fill='both', expand=True, side='left')
         w.mainloop()
-    
     return w, fm, run
+
 
 # Storage module
 def save(ext, *args):
@@ -444,6 +465,14 @@ class GenericWave(object):
         """
         Plot y v.s. x.
 
+        Parameters
+        ----------
+        figure_name : TYPE, optional
+            DESCRIPTION. The default is ''.
+        toByteStream : bool, optional
+            Set True to convert plot into byte stream without plotting. The
+            default is False.
+
         Returns
         -------
         matplotlib.lines.Line2D
@@ -509,6 +538,9 @@ class GenericWave(object):
         ----------
         dBm_scale : boolean, optional
             Show plot in dBm scale. The default is True.
+        toByteStream : bool, optional
+            Set True to convert plot into byte stream without plotting. The
+            default is False.
 
         Returns
         -------
@@ -537,7 +569,7 @@ class GenericGate(object):
     def __init__(self, *qcObj):
         temp = deepcopy(qcObj)
         temp = temp[0].__class__.alignQubitChannels(*temp)
-        self._qubitDict = {qcObj0._name: qcObj0 for qcObj0 in temp}
+        self._qubitDict = {qcObj0.name: qcObj0 for qcObj0 in temp}
         self._name = ''
 
     @property
@@ -551,6 +583,10 @@ class GenericGate(object):
     @property
     def numOfQubits(self):
         return len(self._qubitDict)
+
+    @property
+    def qubitNames(self):
+        return *self._qubitDict.keys(),
 
     def __str__(self):
         """

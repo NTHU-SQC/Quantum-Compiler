@@ -9,7 +9,7 @@ embedding matplotlib plot inside tkinter label:
     https://stackoverflow.com/questions/67648380
 scrolling a group of widgets:
     https://sodocumentation.net/tkinter/topic/8931/scrolling-widgets
-    
+
 Bug:
 1.tkinter "_tkinter.TclError: image "pyimage9" doesn't exist":
     https://stackoverflow.com/questions/25460418
@@ -89,21 +89,9 @@ class QuantumCircuit(object):
     def qubitDict(self):
         return self._qubitDict
 
-    @qubitDict.setter
-    def qubitDict(self, qubit={}):
-        if len(self._qubitDict) != len(qubit):
-            raise ValueError('Name field size mismatched')
-        self._qubitDict = qubit
-
     @property
     def readoutDict(self):
         return self._readoutDict
-
-    @readoutDict.setter
-    def readoutDict(self, readout={}):
-        if len(self._readoutDict) != len(readout):
-            raise ValueError('Name field size mismatched')
-        self._readoutDict = readout
 
     def assign(self, gateObj, mapping):
         """
@@ -171,6 +159,15 @@ class QuantumCircuit(object):
             return self.readoutDict[qubit_name]
 
     def view(self, windowSize='800x600'):
+        """
+        Show the current diagram in grid plot.
+
+        Parameters
+        ----------
+        windowSize : str, optional
+            Window size that is specified in string. The default is '800x600'.
+
+        """
         f = np.vectorize(
             lambda x: x.__str__() if isinstance(x, QubitChannel) else str(
                 np.nan
@@ -196,6 +193,15 @@ class QuantumCircuit(object):
         run()
 
     def plot(self, windowSize='800x600'):
+        """
+        Show the compiled waveform plots.
+
+        Parameters
+        ----------
+        windowSize : str, optional
+            Window size that is specified in string. The default is '800x600'.
+
+        """
         if not hasattr(self, 'compiled'):
             raise RuntimeError('The object has not compiled yet')
         # create a scrollable window
@@ -213,7 +219,7 @@ class QuantumCircuit(object):
                 )
             render = ImageTk.PhotoImage(Image.open(img_data))
             img_ref += [render]
-            img = Label(fm, image = render, borderwidth=1, relief='solid')
+            img = Label(fm, image=render, borderwidth=1, relief='solid')
             img.grid(row=count, column=1, ipadx=5, ipady=5, sticky='news')
             img.image = render
             count += 1
@@ -296,14 +302,14 @@ if __name__ == '__main__':
     b2.name = 'b2'
     c.name = 'c'
     # c.plot(allInOne=False)
-    kk = QuantumCircuit({'a': 0, 'b': 2, 'c': 1}, 10, ['readout'])
-    kk = QuantumCircuit(['a', 'b', 'c'], 10, ['readout'])
-    kk.assign(c, (0, 0))
-    kk.assign(c, (1, 0))
+    kk = QuantumCircuit({'a': 0, 'b': 3, 'CC': 1}, 10, ['readout'])
+    # kk = QuantumCircuit(['a', 'b', 'CC'], 10, ['readout'])
+    kk.assign(c, ('a', 0))
+    kk.assign(c, ('CC', 0))
+    kk.assign(b1, ('b', 8))
+    kk.assign(b2, ('b', 5))
     z = GenericGate(c)
-    kk.assign(z, {'c': (0, 11)})
-    kk.assign(b1, (2, 8))
-    kk.assign(b2, (2, 5))
+    kk.assign(z, {'c': ('a', 11)})
     kk.assign(z, {'c': ('readout', 10)})
     kk.assign(z, {'c': ('readout', 9)})
     kk.assign(z, {'c': ('readout', 8)})
@@ -312,5 +318,5 @@ if __name__ == '__main__':
     kk.compileCkt()
     kk.plot()
     # print(kk@'c')
-    # kk.view()
+    kk.view()
     pass
