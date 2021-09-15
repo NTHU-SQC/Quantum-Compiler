@@ -1138,11 +1138,22 @@ class QubitChannel(tpm.GenericWave):
             List of indices of wires to be examined. The default is [].
         size : list, optional
             Size of each subplot. The default is [6.4, 4.8].
+        figure_name : str, optional
+            Name of figure. The default is ''.
+        allInOne : bool, optional
+            Set True to put all traces into the same subplot. The default is
+            False.
+        toByteStream : bool, optional
+            Set True to convert plot into byte stream without plotting. The
+            default is False.
+        showSizeInfo : bool, optional
+            Set True to show plot size during plot creation. The default is
+            True.
 
         Returns
         -------
-        axisObjArr : list
-            List of 2D line objects.
+        fig/BytesIO : matplotlib.lines.Line2D or BytesIO object
+            Figure of byte stream object.
 
         """
         if not wire_indices:
