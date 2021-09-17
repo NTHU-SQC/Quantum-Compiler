@@ -290,11 +290,10 @@ class QuantumCircuit(object):
 
 
 if __name__ == '__main__':
-    # from shape_functionV5 import gaussian, get_x
-    from ShapeModule import setFunc
+    from shape_functionV5 import gaussian, get_x
     from WaveModule import Wave, Waveform
     from TemplateModule import GenericGate
-    a = Wave(setFunc('gaussian', [5e-6, 1e-6], 10e-6))
+    a = Wave(gaussian, [get_x(10e-6), 5e-6, 1e-6])
     b = Waveform(Waveform._nullBlock(a.span*2))
     b1 = ~(b+b+~a)
     b2 = ~(~a+b+~a+b)
@@ -302,7 +301,7 @@ if __name__ == '__main__':
     b1.name = 'b1'
     b2.name = 'b2'
     c.name = 'c'
-    # c.plot(allInOne=True)
+    # c.plot(allInOne=False)
     kk = QuantumCircuit({'a': 0, 'b': 3, 'CC': 1}, 10, ['readout'])
     # kk = QuantumCircuit(['a', 'b', 'CC'], 10, ['readout'])
     kk.assign(c, ('a', 0))
@@ -315,7 +314,7 @@ if __name__ == '__main__':
     kk.assign(z, {'c': ('readout', 9)})
     kk.assign(z, {'c': ('readout', 8)})
 
-    kk.view()
+    # kk.view()
     kk.compileCkt()
     kk.plot()
     # print(kk@'c')
