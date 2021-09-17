@@ -45,7 +45,6 @@ class Wave(tpm.GenericWave):
             self._appendRule = temp['appendRule']
             return
         self._x, self._y, self._name, self._appendRule = parse(generator)
-        
 
     @property
     def appendRule(self):

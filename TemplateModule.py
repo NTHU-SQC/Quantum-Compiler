@@ -117,6 +117,7 @@ def draw(
 # Window module
 def simple_scrollable_window(windowSize='800x600'):
     w = Tk()
+    w.attributes("-topmost", True)
     w.geometry(windowSize)
     cvs = Canvas(w)
     # set up scroall bar
@@ -214,11 +215,11 @@ def get_path(ext='', title='Select item'):
         tuple of absolute paths.
 
     """
-    root = tkinter.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
+    w = tkinter.Tk()
+    w.withdraw()
+    w.attributes("-topmost", True)
     return filedialog.askopenfilenames(
-        parent=root,
+        parent=w,
         filetypes=[(ext.upper() + ' Files', ext)],
         title=title)
 
@@ -587,6 +588,10 @@ class GenericGate(object):
     @property
     def qubitNames(self):
         return *self._qubitDict.keys(),
+
+    @property
+    def qubitDict(self):
+        return self._qubitDict
 
     def __str__(self):
         """

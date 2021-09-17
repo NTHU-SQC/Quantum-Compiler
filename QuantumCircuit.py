@@ -21,13 +21,13 @@ import numpy as np
 from WaveModule import QubitChannel
 from TemplateModule import save, load, simple_scrollable_window
 from copy import deepcopy
-from tkinter import Label
+from tkinter import Label, Button
 from PIL import ImageTk, Image
 
 
 class QuantumCircuit(object):
 
-    def __init__(self, qubit={}, blockNum=1, readout={}):
+    def __init__(self, qubit={}, blockNum=1, auxiliary={}):
         """
         Create a timeline of quantum circuit diagram.
 
@@ -40,14 +40,14 @@ class QuantumCircuit(object):
             The default is {}.
         blockNum : int, optional
             Number of time indices. The default is 1.
-        readout : dict/list, optional
-            Similar to qubit for special readout purposes. The index order can
-            be mixed with qubit in dict mode while the in list mode the index
-            order is always later than qubit ones. The default is {}.
+        auxiliary : dict/list, optional
+            Similar to qubit for special purposes. The index order can be mixed
+            with qubit in dict mode while the in list mode the index order is
+            always later than qubit ones. The default is {}.
 
         """
         self.diagram = np.asarray(
-            [[np.nan] * blockNum] * (len(qubit) + len(readout)),
+            [[np.nan] * blockNum] * (len(qubit) + len(auxiliary)),
             dtype=object
             )
         # check datatype and assign
@@ -57,25 +57,29 @@ class QuantumCircuit(object):
             self._qubitDict = qubit
         else:
             raise TypeError('qubitDict: Unsupported format')
-        if isinstance(readout, list):
+        if isinstance(auxiliary, list):
             used_idx = [val for _, val in self._qubitDict.items()]
             unused_idx = sorted([
-                val for val in range(len(readout) + len(qubit))
+                val for val in range(len(auxiliary) + len(qubit))
                 if val not in used_idx
                 ])
-            self._readoutDict = dict(zip(readout, unused_idx))
-        elif isinstance(readout, dict):
-            self._readoutDict = readout
+            self._auxiliaryDict = dict(zip(auxiliary, unused_idx))
+        elif isinstance(auxiliary, dict):
+            self._auxiliaryDict = auxiliary
         else:
-            raise TypeError('readoutDict: Unsupported format')
+            raise TypeError('auxiliaryDict: Unsupported format')
         # index check
-        for key, val in {**self._qubitDict, **self._readoutDict}.items():
+        for key, val in {**self._qubitDict, **self._auxiliaryDict}.items():
             if val >= len(self.diagram[:, 0]):
                 raise ValueError(
                     f'QubitChannel \'{key}\' assignment out of bound with ' +
                     f'index: {val}'
                         )
         self._name = ''
+        self.gateName = np.asarray(
+            [[''] * blockNum] * (len(qubit) + len(auxiliary)),
+            dtype=object
+            )
 
     @property
     def name(self):
@@ -90,8 +94,8 @@ class QuantumCircuit(object):
         return self._qubitDict
 
     @property
-    def readoutDict(self):
-        return self._readoutDict
+    def auxiliaryDict(self):
+        return self._auxiliaryDict
 
     def assign(self, gateObj, mapping):
         """
@@ -114,31 +118,40 @@ class QuantumCircuit(object):
 
         """
         copied = deepcopy(gateObj)
+        width = len(self.diagram[:, 0])
         if isinstance(mapping, dict):
+            # Gate assign mode
             for key, idx_tag in mapping.items():
                 qubitIdx = self.get_index(idx_tag[0])
                 blockNum = idx_tag[1] - len(self.diagram[0, :]) + 1
                 if blockNum > 0:
                     self.diagram = np.concatenate((
                         self.diagram, np.asarray(
-                            [[np.nan] * blockNum] * len(self.diagram[:, 0])
+                            [[np.nan] * blockNum] * width, dtype=object
                             )
                         ), axis=1)
-                self.diagram[qubitIdx, idx_tag[1]] = copied._qubitDict[key]
+                    self.gateName = np.concatenate((
+                        self.gateName, np.asarray(
+                            [[''] * blockNum] * width, dtype=object
+                            )
+                        ), axis=1)
+                self.diagram[qubitIdx, idx_tag[1]] = copied.qubitDict[key]
+                self.gateName[qubitIdx, idx_tag[1]] = copied.name
         else:
+            # QubitChannel assign mode
             qubitIdx = self.get_index(mapping[0])
             blockNum = mapping[1] - len(self.diagram[0, :]) + 1
             if blockNum > 0:
                 self.diagram = np.concatenate((
                     self.diagram, np.asarray(
-                        [[np.nan] * blockNum] * len(self.diagram[:, 0])
+                        [[np.nan] * blockNum] * width, dtype=object
                         )
                     ), axis=1)
             self.diagram[qubitIdx, mapping[1]] = copied
 
     def get_index(self, qubit_name):
         """
-        Get the index of the qubit/readout according to its name.
+        Get the index of the qubit/auxiliary according to its name.
 
         Parameters
         ----------
@@ -156,7 +169,7 @@ class QuantumCircuit(object):
         try:
             return self.qubitDict[qubit_name]
         except KeyError:
-            return self.readoutDict[qubit_name]
+            return self.auxiliaryDict[qubit_name]
 
     def view(self, windowSize='800x600'):
         """
@@ -170,18 +183,22 @@ class QuantumCircuit(object):
         """
         f = np.vectorize(
             lambda x: x.__str__() if isinstance(x, QubitChannel) else str(
-                np.nan
-                )
+                np.nan), otypes=[object]
             )
-        data = f(self.diagram)
+        g = np.vectorize(
+            lambda x: 'Gate: ' + x + '\n' if x else '', otypes=[object]
+            )
+        str1 = g(self.gateName)
+        str2 = f(self.diagram)
+        data = str1 + str2
         namefield = np.array([['']] * len(self.diagram[:, 0]), dtype=object)
-        for key, val in {**self.qubitDict, **self.readoutDict}.items():
+        for key, val in {**self.qubitDict, **self.auxiliaryDict}.items():
             namefield[val] = key + f':{val}'
         data = np.hstack([namefield, data])
         timeindex = np.array(
             [''] + list(range(len(self.diagram[0, :]))), dtype=object
             )
-        data = np.array(np.vstack([timeindex, data]), dtype=str)
+        data = np.array(np.vstack([timeindex, data]), dtype=object)
         # create a scrollable window
         _, fm, run = simple_scrollable_window(windowSize)
         for i, row in enumerate(data):
@@ -206,9 +223,12 @@ class QuantumCircuit(object):
             raise RuntimeError('The object has not compiled yet')
         # create a scrollable window
         _, fm, run = simple_scrollable_window(windowSize)
-        count = 0
+        Button(
+            fm, text='View assignment', command=self.view
+            ).grid(row=0, column=0, columnspan=2)
+        count = 1
         img_ref = []
-        for key, val in {**self.qubitDict, **self.readoutDict}.items():
+        for key, val in {**self.qubitDict, **self.auxiliaryDict}.items():
             Label(
                 fm, text=key + f':{val}', font='Consolas',
                 relief='solid', borderwidth=1
@@ -294,7 +314,7 @@ if __name__ == '__main__':
     from ShapeModule import setFunc
     from WaveModule import Wave, Waveform
     from TemplateModule import GenericGate
-    a = Wave(setFunc('gaussian', {'peak_x': 5e-6, 'sigma':1e-6}, 10e-6))
+    a = Wave(setFunc('gaussian', {'peak_x': 5e-6, 'sigma': 1e-6}, 10e-6))
     b = Waveform(Waveform._nullBlock(a.span*2))
     b1 = ~(b+b+~a)
     b2 = ~(~a+b+~a+b)
@@ -303,21 +323,19 @@ if __name__ == '__main__':
     b2.name = 'b2'
     c.name = 'c'
     # c.plot(allInOne=True)
-    kk = QuantumCircuit({'a': 0, 'b': 3, 'CC': 1}, 10, ['readout'])
-    # kk = QuantumCircuit(['a', 'b', 'CC'], 10, ['readout'])
+    kk = QuantumCircuit({'a': 0, 'b': 1, 'CC': 2}, 10, ['readout'])
     kk.assign(c, ('a', 0))
     kk.assign(c, ('CC', 0))
     kk.assign(b1, ('b', 8))
     kk.assign(b2, ('b', 5))
     z = GenericGate(c)
+    z.name = 'some gate'
     kk.assign(z, {'c': ('a', 11)})
     kk.assign(z, {'c': ('readout', 10)})
     kk.assign(z, {'c': ('readout', 9)})
     kk.assign(z, {'c': ('readout', 8)})
-
-    kk.view()
+    # kk.view()
     kk.compileCkt()
     kk.plot()
     # print(kk@'c')
-    kk.view()
     pass

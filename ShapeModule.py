@@ -11,7 +11,7 @@ import numpy as np
 from inspect import getfullargspec as showarg
 
 
-def gaussian(x:np.array, peak_x:float, sigma:float):
+def gaussian(x: np.array, peak_x: float, sigma: float):
     """
     Gaussian pulse generating function
 
@@ -33,7 +33,7 @@ def gaussian(x:np.array, peak_x:float, sigma:float):
     return np.exp((-1 * (x - peak_x)**2) / (2 * sigma**2))
 
 
-def const(x:np.array, lv:float):
+def const(x: np.array, lv: float):
     """
     Constant level.
 
@@ -53,7 +53,7 @@ def const(x:np.array, lv:float):
     return lv * np.ones(x.size)
 
 
-def exp_rising(x:np.array, peak_x:float, tau:float):
+def exp_rising(x: np.array, peak_x: float, tau: float):
     """
     Unit exponential rising pulse.
 
@@ -78,7 +78,7 @@ def exp_rising(x:np.array, peak_x:float, tau:float):
         ))
 
 
-def exp_falling(x:np.array, peak_x:float, tau:float):
+def exp_falling(x: np.array, peak_x: float, tau: float):
     """
     Unit exponential falling pulse.
 
@@ -103,7 +103,9 @@ def exp_falling(x:np.array, peak_x:float, tau:float):
         ))
 
 
-def gaussian_square(x:np.array, first_peak_x:float, flat:float, sigma:float):
+def gaussian_square(
+        x: np.array, first_peak_x: float, flat: float, sigma: float
+        ):
     """
     Unit square pulse with Gaussian edges.
 
@@ -135,7 +137,7 @@ def gaussian_square(x:np.array, first_peak_x:float, flat:float, sigma:float):
         ))
 
 
-def exp_square(x:np.array, first_peak_x:float, flat:float, tau:float):
+def exp_square(x: np.array, first_peak_x: float, flat: float, tau: float):
     """
     Unit square pulse with exponential edges.
 
@@ -167,7 +169,7 @@ def exp_square(x:np.array, first_peak_x:float, flat:float, tau:float):
         ))
 
 
-def sine(x:np.array, period:float, start_phase:float):
+def sine(x: np.array, period: float, start_phase: float):
     """
     Unit sine pulse generating function specified in period.
 
@@ -189,7 +191,7 @@ def sine(x:np.array, period:float, start_phase:float):
     return np.sin(2*np.pi*(x / period) + start_phase)
 
 
-def sine2(x:np.array, frequency:float, start_phase:float):
+def sine2(x: np.array, frequency: float, start_phase: float):
     """
     Unit sine pulse generating function specified in frequency.
 
@@ -211,7 +213,7 @@ def sine2(x:np.array, frequency:float, start_phase:float):
     return np.sin(2 * np.pi * frequency * x + start_phase)
 
 
-def cosine(x:np.array, period:float, start_phase:float):
+def cosine(x: np.array, period: float, start_phase: float):
     """
     Unit cosine pulse generating function specified in period.
 
@@ -233,7 +235,7 @@ def cosine(x:np.array, period:float, start_phase:float):
     return np.cos(2*np.pi*(x / period) + start_phase)
 
 
-def cosine2(x:np.array, frequency:float, start_phase:float):
+def cosine2(x: np.array, frequency: float, start_phase: float):
     """
     Unit cosine pulse generating function specified in frequency.
 
@@ -255,7 +257,7 @@ def cosine2(x:np.array, frequency:float, start_phase:float):
     return np.cos(2 * np.pi * frequency * x + start_phase)
 
 
-def square(x:np.array, start:float, flat:float):
+def square(x: np.array, start: float, flat: float):
     """
     Unit square pulse generating function.
 
@@ -281,7 +283,7 @@ def square(x:np.array, start:float, flat:float):
         ))
 
 
-def get_x(span:float=.0, sampling_rate:float=1e9):
+def get_x(span: float = .0, sampling_rate: float = 1e9):
     """
     Formatted timeline creation.
 
@@ -317,9 +319,9 @@ function_mappings = {
 
 
 def setFunc(
-        func, funcArg,
-        span=.0, sampling_rate=1e9,
-        name='', appendRule=[True, True]
+        func: str, funcArg: list,
+        span: float = .0, sampling_rate: float = 1e9,
+        name: str = '', appendRule: list = [True, True]
         ):
     """
     Shape function wrapper.
@@ -356,9 +358,9 @@ def setFunc(
         'appendRule': appendRule
         }
     return generator
-        
-    
-def parse(generator):
+
+
+def parse(generator: dict):
     """
     Parse and compile generator data into wave x-y data
 
@@ -399,6 +401,6 @@ def parse(generator):
 
 if __name__ == '__main__':
     # a = setFunc('gaussian', [5e-6, 1e-6], 10e-6)
-    a = setFunc('gaussian', {'peak_x': 5e-6, 'sigma':1e-6}, 10e-6)
+    a = setFunc('gaussian', {'peak_x': 5e-6, 'sigma': 1e-6}, 10e-6)
     x, y, name, appendRule = parse(a)
     pass
