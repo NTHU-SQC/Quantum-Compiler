@@ -281,7 +281,7 @@ def square(x:np.array, start:float, flat:float):
         ))
 
 
-def get_x(span=.0, sampling_rate=1e9):
+def get_x(span:float=.0, sampling_rate:float=1e9):
     """
     Formatted timeline creation.
 
