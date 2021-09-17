@@ -18,11 +18,12 @@ Bug:
 """
 
 import numpy as np
-from WaveModule import QubitChannel
-from TemplateModule import save, load, simple_scrollable_window
 from copy import deepcopy
 from tkinter import Label, Button
 from PIL import ImageTk, Image
+
+from WaveModule import QubitChannel
+from TemplateModule import save, load, simple_scrollable_window
 
 
 class QuantumCircuit(object):

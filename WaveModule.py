@@ -8,13 +8,14 @@ for set / get vs IDE:
 @author: Alaster
 """
 
-import TemplateModule as tpm
 import numpy as np
 from copy import deepcopy
+
 from ShapeModule import parse, setFunc
+from TemplateModule import GenericWave, axis, draw
 
 
-class Wave(tpm.GenericWave):
+class Wave(GenericWave):
 
     def __init__(self, generator=None, properties={}):
         """
@@ -318,7 +319,7 @@ class Wave(tpm.GenericWave):
         return Wave(properties=properties)
 
 
-class Waveform(tpm.GenericWave):
+class Waveform(GenericWave):
 
     def __init__(self, waveObjList=[], name=''):
         """
@@ -868,7 +869,7 @@ class Waveform(tpm.GenericWave):
             raise TypeError("Incorrect data type")
 
 
-class QubitChannel(tpm.GenericWave):
+class QubitChannel(GenericWave):
 
     def __init__(self, *waveforms):
         """
@@ -1123,12 +1124,12 @@ class QubitChannel(tpm.GenericWave):
             wire_indices = range(len(self._wires))
         ydict_list = [{}] * len(wire_indices)
         for idx, i in zip(wire_indices, range(len(wire_indices))):
-            ydict_list[i] = tpm.axis(
+            ydict_list[i] = axis(
                 self._wire_names[idx], 'amplitude', self._wires[idx].y, False
                 )
         if not figure_name:
             figure_name = self.name
-        return tpm.draw(
+        return draw(
             self.xaxis, ydict_list, figure_name=figure_name, size=size,
             allInOne=allInOne, toByteStream=toByteStream,
             showSizeInfo=showSizeInfo

@@ -8,21 +8,19 @@ for set / get vs IDE:
 @author: Alaster
 """
 
-import shape_functionV5 as sf
-import TemplateModule as tpm
-import WaveModule as wt
-import numpy as np
+from numpy import *
 
-    
-class Gate(tpm.GenericGate):
+from ShapeModule import *
+from TemplateModule import GenericGate
+from WaveModule import *
+
+
+class Gate(GenericGate):
     
     def __init__(self, parameters):
         # build waveforms
         
-        
         # build qubitchannels
-        
-        
         
         # construct gate
         super().__init__()
