@@ -294,7 +294,7 @@ if __name__ == '__main__':
     from ShapeModule import setFunc
     from WaveModule import Wave, Waveform
     from TemplateModule import GenericGate
-    a = Wave(setFunc('gaussian', [5e-6, 1e-6], 10e-6))
+    a = Wave(setFunc('gaussian', {'peak_x': 5e-6, 'sigma':1e-6}, 10e-6))
     b = Waveform(Waveform._nullBlock(a.span*2))
     b1 = ~(b+b+~a)
     b2 = ~(~a+b+~a+b)

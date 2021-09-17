@@ -329,8 +329,10 @@ def setFunc(
     func : str/function handle
         Shape function to be used, can be specified by string or function
         handle.
-    funcArg : list
-        List of arguments of the function.
+    funcArg : list/dict
+        List/dict of arguments of the function. In dict mode, the user can
+        declare key-value pair with each key corresponding to the argument of
+        the function. The key must match the argument name.
     span : float, optional
         Overall length of timeline. The default is .0.
     sampling_rate : float, optional
@@ -344,6 +346,8 @@ def setFunc(
     if isinstance(func, str):
         func = function_mappings[func]
     argNames = showarg(func).args[1:]
+    if isinstance(funcArg, dict):
+        funcArg = [funcArg[arg] for arg in argNames]
     generator = {
         'function': func.__name__,
         'X': {'span': span, 'sampling_rate': sampling_rate},
@@ -394,6 +398,7 @@ def parse(generator):
 
 
 if __name__ == '__main__':
-    a = setFunc('gaussian', [5e-6, 1e-6], 10e-6)
+    # a = setFunc('gaussian', [5e-6, 1e-6], 10e-6)
+    a = setFunc('gaussian', {'peak_x': 5e-6, 'sigma':1e-6}, 10e-6)
     x, y, name, appendRule = parse(a)
     pass
