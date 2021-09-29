@@ -47,6 +47,6 @@ kk[('readout', 8)] = (z, 'c')
 
 
 # kk.view()
-kk.compileCkt()
+kk.compile()
 # kk.plot()
 print(kk@'CC')

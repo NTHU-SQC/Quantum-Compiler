@@ -255,7 +255,7 @@ class QuantumCircuit(object):
             count += 1
         run()
 
-    def compileCkt(self):
+    def compile(self):
         """
         Compile the quantum circuit.
 
