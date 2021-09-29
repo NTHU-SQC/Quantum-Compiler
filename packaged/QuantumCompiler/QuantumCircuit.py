@@ -282,9 +282,9 @@ class QuantumCircuit(object):
         except SystemError:
             raise ValueError('Error during wire concatenation')
 
-    def __matmul__(self, qubit):
+    def __getitem__(self, qubit):
         """
-        Return the compiled QubitChannel amplitude data y.
+        Get the compiled QubitChannel object with the specified name.
 
         Parameters
         ----------
@@ -294,12 +294,10 @@ class QuantumCircuit(object):
         Returns
         -------
         list
-            List of y from each wire in the compiled QubitChannel object.
+            Return the compiled QubitChannel object.
 
         """
-        if isinstance(qubit, str):
-            qubit = self.get_index(qubit)
-        return self.compiled[qubit].y
+        return self.compiled[self.get_index(qubit)]
 
     @classmethod
     def save(cls, *args):
