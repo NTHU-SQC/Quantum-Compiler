@@ -185,7 +185,7 @@ class QuantumCircuit(object):
         if not hasattr(self, 'compiled'):
             print('Warning: The object has not compiled yet')
             print('Show the uncompiled diagram')
-            compiled=False
+            compiled = False
         diagram = self.diagram
         if compiled:
             diagram = self.compildDiagram
@@ -234,7 +234,8 @@ class QuantumCircuit(object):
         # create a scrollable window
         _, fm, run = simple_scrollable_window(windowSize)
         Button(
-            fm, text='View assignment', command=lambda:self.view(compiled=True)
+            fm, text='View assignment', command=lambda: self.view(
+                compiled=True)
             ).grid(row=0, column=0, columnspan=2)
         count = 1
         img_ref = []
@@ -295,20 +296,20 @@ class QuantumCircuit(object):
     def __matmul__(self, qubit):
         """
         Get the compiled QubitChannel object y arrays with the specified name.
-    
+
         Parameters
         ----------
         qubit : str, int
             Index or the name of qubit.
-    
+
         Returns
         -------
         list
             Return a list of y arrays of the compiled QubitChannel object.
-    
+
         """
         return self.compiled[self.get_index(qubit)].y
-    
+
     def __setitem__(self, idxTuple, item):
         """
         Assign the Gate/QubitChannel object to the specified index tuple. This

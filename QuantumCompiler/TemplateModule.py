@@ -620,7 +620,7 @@ class GenericGate(object):
             QubitChannel object.
 
         """
-        
+
         self._qubitDict[qbname] = qbcObj
 
     def __getitem__(self, qbname):
