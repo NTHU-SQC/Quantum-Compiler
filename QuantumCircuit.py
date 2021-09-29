@@ -313,7 +313,8 @@ class QuantumCircuit(object):
     def __setitem__(self, idxTuple, item):
         """
         Assign the Gate/QubitChannel object to the specified index tuple. This
-        is an alternative form for assign() method.
+        is an alternative form for assign() method. Note that this method only
+        can assign 1 QubitChannel object at a time.
 
         Parameters
         ----------
@@ -321,7 +322,7 @@ class QuantumCircuit(object):
             Index tuple for the assignment on the diagram.
         item : tuple/QubitChannel
             Item to be assigned. For tuple (Gate) mode takes the form:
-                (Gate, qubit name/index)
+                (Gate, qubit name)
 
         """
         qubit = self.get_index(idxTuple[0])

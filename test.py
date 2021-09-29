@@ -4,15 +4,15 @@ Created on Sat Sep 18 02:34:47 2021
 
 @author: user
 """
-# from QuantumCompiler.ShapeModule import setFunc
-# from QuantumCompiler.WaveModule import Wave, Waveform
-# from QuantumCompiler.TemplateModule import GenericGate
-# from QuantumCompiler.QuantumCircuit import QuantumCircuit
+from QuantumCompiler.ShapeModule import setFunc
+from QuantumCompiler.WaveModule import Wave, Waveform
+from QuantumCompiler.TemplateModule import GenericGate
+from QuantumCompiler.QuantumCircuit import QuantumCircuit
 
-from ShapeModule import setFunc
-from WaveModule import Wave, Waveform
-from TemplateModule import GenericGate
-from QuantumCircuit import QuantumCircuit
+# from ShapeModule import setFunc
+# from WaveModule import Wave, Waveform
+# from TemplateModule import GenericGate
+# from QuantumCircuit import QuantumCircuit
 
 a = Wave(setFunc('gaussian', {'peak_x': 5e-6, 'sigma': 1e-6}, 10e-6))
 b = Waveform(Waveform._nullBlock(a.span*2))
