@@ -113,6 +113,10 @@ class QuantumCircuit(object):
                     value is the corresponding indices in the circuit diagram.
                 list -> indices for single QubitChannel object assignment.
 
+        Returns
+        -------
+        None.
+
         """
         copied = deepcopy(gateObj)
         width = len(self.diagram[:, 0])
@@ -168,28 +172,16 @@ class QuantumCircuit(object):
         except KeyError:
             return self.auxiliaryDict[qubit_name]
 
-    def view(self, compiled=False, windowSize='800x600'):
+    def view(self, windowSize='800x600'):
         """
         Show the current diagram in grid plot.
 
         Parameters
         ----------
-        compiled : boolean, optional
-            Set True to view the compiled diagram, uncompiled one otherwise.
-            The default is False.
         windowSize : str, optional
             Window size that is specified in string. The default is '800x600'.
 
         """
-        # check if compiled and select diagram
-        if not hasattr(self, 'compiled'):
-            print('Warning: The object has not compiled yet')
-            print('Show the uncompiled diagram')
-            compiled=False
-        diagram = self.diagram
-        if compiled:
-            diagram = self.compildDiagram
-        # create vectorized functions
         f = np.vectorize(
             lambda x: x.__str__() if isinstance(x, QubitChannel) else str(
                 np.nan), otypes=[object]
@@ -197,16 +189,15 @@ class QuantumCircuit(object):
         g = np.vectorize(
             lambda x: 'Gate: ' + x + '\n' if x else '', otypes=[object]
             )
-        # convert the diagram into info strings
         str1 = g(self.gateName)
-        str2 = f(diagram)
+        str2 = f(self.diagram)
         data = str1 + str2
-        namefield = np.array([['']] * len(diagram[:, 0]), dtype=object)
+        namefield = np.array([['']] * len(self.diagram[:, 0]), dtype=object)
         for key, val in {**self.qubitDict, **self.auxiliaryDict}.items():
             namefield[val] = key + f':{val}'
         data = np.hstack([namefield, data])
         timeindex = np.array(
-            [''] + list(range(len(diagram[0, :]))), dtype=object
+            [''] + list(range(len(self.diagram[0, :]))), dtype=object
             )
         data = np.array(np.vstack([timeindex, data]), dtype=object)
         # create a scrollable window
@@ -234,7 +225,7 @@ class QuantumCircuit(object):
         # create a scrollable window
         _, fm, run = simple_scrollable_window(windowSize)
         Button(
-            fm, text='View assignment', command=lambda:self.view(compiled=True)
+            fm, text='View assignment', command=self.view
             ).grid(row=0, column=0, columnspan=2)
         count = 1
         img_ref = []
@@ -260,16 +251,15 @@ class QuantumCircuit(object):
         Compile the quantum circuit.
 
         """
-        self.compildDiagram = deepcopy(self.diagram)
         f = np.vectorize(lambda x: isinstance(x, QubitChannel))
-        table = f(self.compildDiagram)
+        table = f(self.diagram)
         col_bool = np.bitwise_or.reduce(table, axis=1)
         # filter nan in 'qubit' direction
         if not np.bitwise_and.reduce(col_bool):
             raise ValueError('Found unassigned qubit')
         # filter nan in 'time' direction
         row_bool = np.bitwise_or.reduce(table, axis=0)
-        diagram = self.compildDiagram[:, row_bool]
+        diagram = self.diagram[:, row_bool]
         table = table[:, row_bool]
         # align QubitChannel objects in the table column by column
         for time_idx in range(len(table[0, :])):
@@ -294,35 +284,22 @@ class QuantumCircuit(object):
 
     def __matmul__(self, qubit):
         """
-        Get the compiled QubitChannel object y arrays with the specified name.
-    
+        Get the compiled QubitChannel object with the specified name.
+
         Parameters
         ----------
         qubit : str, int
             Index or the name of qubit.
-    
+
         Returns
         -------
         list
-            Return a list of y arrays of the compiled QubitChannel object.
-    
+            Return the compiled QubitChannel object.
+
         """
-        return self.compiled[self.get_index(qubit)].y
+        return self.compiled[self.get_index(qubit)]
     
     def __setitem__(self, idxTuple, item):
-        """
-        Assign the Gate/QubitChannel object to the specified index tuple. This
-        is an alternative form for assign() method.
-
-        Parameters
-        ----------
-        idxTuple : tuple/list
-            Index tuple for the assignment on the diagram.
-        item : tuple/QubitChannel
-            Item to be assigned. For tuple (Gate) mode takes the form:
-                (Gate, qubit name/index)
-
-        """
         qubit = self.get_index(idxTuple[0])
         time = idxTuple[1]
         if isinstance(item, tuple) or isinstance(item, list):
@@ -331,20 +308,6 @@ class QuantumCircuit(object):
             self.assign(item, (qubit, time))
 
     def __getitem__(self, idxTuple):
-        """
-        Get QubitChannel object from diagram with specified index tuple.
-
-        Parameters
-        ----------
-        idxTuple : tuple/list
-            Index tuple for the diagram element accessing.
-
-        Returns
-        -------
-        QubitChannel
-            Corresponding QubitChannel object.
-
-        """
         qubit = self.get_index(idxTuple[0])
         time = idxTuple[1]
         return self.diagram[qubit, time]
