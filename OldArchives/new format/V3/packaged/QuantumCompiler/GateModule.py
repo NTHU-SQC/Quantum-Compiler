@@ -10,9 +10,9 @@ for set / get vs IDE:
 
 from numpy import *
 
-from ShapeModule import *
-from TemplateModule import GenericGate
-from WaveModule import *
+from .ShapeModule import *
+from .TemplateModule import GenericGate
+from .WaveModule import *
 
 
 class Gate(GenericGate):

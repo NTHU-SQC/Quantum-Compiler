@@ -308,3 +308,35 @@ class QuantumCircuit(object):
     @classmethod
     def load(cls, *args):
         return load('.qckt', *args)
+
+
+if __name__ == '__main__':
+    # from shape_functionV5 import gaussian, get_x
+    from ShapeModule import setFunc
+    from WaveModule import Wave, Waveform
+    from TemplateModule import GenericGate
+    a = Wave(setFunc('gaussian', {'peak_x': 5e-6, 'sigma': 1e-6}, 10e-6))
+    b = Waveform(Waveform._nullBlock(a.span*2))
+    b1 = ~(b+b+~a)
+    b2 = ~(~a+b+~a+b)
+    c = ~b / ~a
+    b1.name = 'b1'
+    b2.name = 'b2'
+    c.name = 'c'
+    # c.plot(allInOne=True)
+    kk = QuantumCircuit({'a': 0, 'b': 1, 'CC': 2}, 10, ['readout'])
+    kk.assign(c, ('a', 0))
+    kk.assign(c, ('CC', 0))
+    kk.assign(b1, ('b', 8))
+    kk.assign(b2, ('b', 5))
+    z = GenericGate(c)
+    z.name = 'some gate'
+    kk.assign(z, {'c': ('a', 11)})
+    kk.assign(z, {'c': ('readout', 10)})
+    kk.assign(z, {'c': ('readout', 9)})
+    kk.assign(z, {'c': ('readout', 8)})
+    # kk.view()
+    kk.compileCkt()
+    kk.plot()
+    # print(kk@'c')
+    pass

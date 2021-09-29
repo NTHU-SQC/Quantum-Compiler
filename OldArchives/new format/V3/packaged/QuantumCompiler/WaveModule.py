@@ -9,382 +9,15 @@ for set / get vs IDE:
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
 from copy import deepcopy
-from scipy.signal import welch
-from scipy.fft import fft, ifft, fftfreq, fftshift
 
-
-class GenericWave():
-
-    def __init__(self):
-        # fundamental attributes
-        self._x
-        self._dx
-        self._y
-        self._name
-        pass
-
-    @property
-    def span(self):
-        return self._x[-1] - self._x[0]
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name=''):
-        self._name = name
-
-    @property
-    def x(self):
-        return self._x
-
-    @property
-    def y(self):
-        return self._y
-
-    @property
-    def f(self):
-        return fftfreq(len(self), self._dx)
-
-    @property
-    def yf(self):
-        return fft(self._y)
-
-    @property
-    def dx(self):
-        return self._dx
-
-    @property
-    def xy(self):
-        return self._x, self._y
-
-    @property
-    def xaxis(self):
-        return GenericWave.axis('t', 'time (s)', self._x, False)
-
-    @property
-    def faxis(self):
-        return GenericWave.axis('t', 'time (s)', fftshift(self.f), False)
-
-    @property
-    def yfaxis(self):
-        return GenericWave.axis('t', 'time (s)', fftshift(self.yf), False)
-
-    def __len__(self):
-        """
-        Get number of points in the object. Denoted as len(self).
-
-        Returns
-        -------
-        int
-            Number of points in the object.
-
-        """
-        return len(self._x)
-
-    def __max__(self, *gwObj):
-        """
-        Return object contains the largest number of points. Denoted as
-        max(self, *gwObj).
-
-        Parameters
-        ----------
-        *gwObj : GenericWave
-            Multiple objects to be compared.
-
-        Returns
-        -------
-        GenericWave
-            Largest object.
-
-        """
-        return max(self, *gwObj, key=len)
-
-    def __min__(self, *gwObj):
-        """
-        Return object contains the smallest number of points. Denoted as
-        min(self, *gwObj).
-
-        Parameters
-        ----------
-        *gwObj : GenericWave
-            Multiple objects to be compared.
-
-        Returns
-        -------
-        GenericWave
-            Smallest object.
-
-        """
-        return min(self, *gwObj, key=len)
-
-    def __lt__(self, gwObj):
-        """
-        Operator method for self < gwObj.
-
-        Parameters
-        ----------
-        gwObj : GenericWave
-            Operand.
-
-        Returns
-        -------
-        Boolean
-            True if len(self) < len(gwObj).
-
-        """
-        return len(self) < len(gwObj)
-
-    def __le__(self, gwObj):
-        """
-        Operator method for self <= gwObj.
-
-        Parameters
-        ----------
-        gwObj : GenericWave
-            Operand.
-
-        Returns
-        -------
-        Boolean
-            True if len(self) <= len(gwObj).
-
-        """
-        return len(self) <= len(gwObj)
-
-    def __eq__(self, gwObj):
-        """
-        Operator method for self == gwObj.
-
-        Parameters
-        ----------
-        gwObj : GenericWave
-            Operand.
-
-        Returns
-        -------
-        Boolean
-            True if len(self) == len(gwObj).
-
-        """
-        return len(self) == len(gwObj)
-
-    def __ne__(self, gwObj):
-        """
-        Operator method for self != gwObj.
-
-        Parameters
-        ----------
-        gwObj : GenericWave
-            Operand.
-
-        Returns
-        -------
-        Boolean
-            True if len(self) != len(gwObj).
-
-        """
-        return len(self) != len(gwObj)
-
-    def __ge__(self, gwObj):
-        """
-        Operator method for self >= gwObj.
-
-        Parameters
-        ----------
-        gwObj : GenericWave
-            Operand.
-
-        Returns
-        -------
-        Boolean
-            True if len(self) >= len(gwObj).
-
-        """
-        return len(self) >= len(gwObj)
-
-    def __gt__(self, gwObj):
-        """
-        Operator method for self > gwObj.
-
-        Parameters
-        ----------
-        gwObj : GenericWave
-            Operand.
-
-        Returns
-        -------
-        Boolean
-            True if len(self) > len(gwObj).
-
-        """
-        return len(self) > len(gwObj)
-
-    def __matmul__(self, xList=[]):
-        """
-        Return the corresponding y at the indicated x by interpolation. Denoted
-        as self @ x.
-
-        Parameters
-        ----------
-        xList : list
-            List of position x.
-
-        Returns
-        -------
-        list
-            List of amplitude y.
-
-        """
-        return np.array([np.interp(x, self._x, self._y) for x in xList])
-
-    def plot(self, figure_name=''):
-        """
-        Plot y v.s. x.
-
-        Returns
-        -------
-        matplotlib.lines.Line2D
-            Plot handler object.
-
-        """
-        xdict = self.xaxis
-        ydict_list = [{
-            'name': self._name, 'label': 'amplitude',
-            'data': self._y, 'log': False
-            }]
-        return GenericWave.draw(xdict, ydict_list, figure_name)
-
-    def diff(self, n=1):
-        """
-        Calculate y n-th derivative using fft method.
-
-        Parameters
-        ----------
-        n : int, optional
-            order of differentiation. The default is 1.
-
-        Returns
-        -------
-        numpy.array
-            y derivative of n-th order.
-
-        """
-        return ifft((1j * 2 * np.pi * self.f)**n * fft(self._y)).real
-
-    def psd(self, dBm_scale=True):
-        """
-        Calculate PSD using FFT.
-        ref=https://stackoverflow.com/questions/20165193/fft-normalization
-
-        #######################################################
-        # FFT using Welch method
-        # windows = np.ones(nfft) - no windowing
-        # if windows = 'hamming', etc.. this function will
-        # normalize to an equivalent noise bandwidth (ENBW)
-        #######################################################
-
-        Returns
-        -------
-        list
-            FFT outputs, including: [frequency, lineaer scale, dbm scale].
-
-        """
-        nfft = len(self)  # fft size same as signal size
-        sample_rate = 1 / self._dx
-        f, Pxx_den = welch(
-            self._y, fs=sample_rate, window=np.ones(nfft),
-            nperseg=nfft, scaling='density'
-            )
-        if dBm_scale:
-            return f, 10.0 * np.log10(Pxx_den)
-        return f, Pxx_den
-
-    def psdplot(self, dBm_scale=True):
-        """
-        Plot PSD of the signal.
-
-        Parameters
-        ----------
-        dBm_scale : boolean, optional
-            Show plot in dBm scale. The default is True.
-
-        Returns
-        -------
-        handle : matplotlib.lines.Line2D
-            Plot handler object.
-
-        """
-        f, PSD = self.psd(dBm_scale)
-        xdict = GenericWave.axis('', 'frequency (Hz)', f, False)
-        ydict_list = [
-            GenericWave.axis(self._name, 'amplitude (Mag/Hz)', PSD, False)
-            ]
-        if dBm_scale:
-            ydict_list[0]['label'] = 'amplitude (dBm/Hz)'
-        return GenericWave.draw(xdict, ydict_list, 'PSD')
-
-    @classmethod
-    def axis(cls, name='', label='', data=np.array([]), log_bool=False):
-        return {'name': name, 'label': label, 'data': data, 'log': log_bool}
-
-    @classmethod
-    def draw(cls, xdict={}, ydict_list=[], figure_name='', titleFontSize=20,
-             size=[6.4, 4.8]):
-        """
-        Formatted plot generation. Dictionary format: dict = {name:str,
-        label:str, data:numpy.array, log:bool}.
-
-        Parameters
-        ----------
-        cls : GenericWave class
-            GenericWave class.
-        xdict : dict
-            Dictionary for x-axis. The default is {}.
-        ydict_list : list, optional
-            List of y-axis dictionaries with the same format as x-axis
-            dictionary. The default is [].
-        figure_name : str, optional
-            Title of the figure. The default is ''.
-        titleFontSize : float, optional
-            Font size for the title. The default is 16.
-        size : list, optional
-            List of subplot sizes in x- and y-axis, respectively. The default
-            is [6.4, 4.8].
-
-        Returns
-        -------
-        fig : matplotlib.lines.Line2D
-            Figure object.
-
-        """
-        if not xdict:
-            xdict = GenericWave.axis(data=range(len(ydict_list[0]['data'])))
-        num_plot = len(ydict_list)
-        fig = plt.figure(figsize=[size[0], size[1] * num_plot])
-        fig.suptitle(figure_name, fontsize=titleFontSize, fontweight="bold")
-        for i in range(num_plot):
-            ax = plt.subplot(num_plot, 1, i+1)
-            plt.plot(xdict['data'], ydict_list[i]['data'])
-            plt.xlabel(xdict['label'])
-            plt.ylabel(ydict_list[i]['label'])
-            ax.legend([ydict_list[i]['name']], loc="best")
-            if xdict['log']:
-                ax.set_xscale('log')
-            if ydict_list[i]['log']:
-                ax.set_yscale('log')
-        print("plot size=[" + str(size[0]) + "," + str(size[1]) + "]")
-        fig.tight_layout()
-        plt.show()
-        return fig
+from .ShapeModule import parse, setFunc
+from .TemplateModule import GenericWave, axis, draw
 
 
 class Wave(GenericWave):
 
-    def __init__(self, funcHandle=None, variables=[], properties={}):
+    def __init__(self, generator=None, properties={}):
         """
         Encapsulation of outputs generated by user defined function (shape
         function) with the capability to further modify wave's amplitude, shape
@@ -392,14 +25,12 @@ class Wave(GenericWave):
 
         Parameters
         ----------
-        funcHandle : function object, optional
-            wave shape generating function object, use None to enable
-            dictionary-object creation of Wave object. The default is None.
-        variables : list, optional
-            list of variable to be passed to funcHandle. The default is [].
+        generator : dict, optional
+            Discription dict for wave generation. Use None to enable explicit
+            content creation of Wave object. The default is None.
         properties : dict, optional
-            Use dictionary-object to create Wave object, available only if
-            funcHandle is None. The default is {}.
+            Use explicit assignment to create Wave object, available only if
+            generator is None. The default is {}.
 
         Returns
         -------
@@ -407,19 +38,14 @@ class Wave(GenericWave):
             An encapsulated Wave object.
 
         """
-        if funcHandle is None:
-            self.__properties = properties
-        else:
-            self.__properties = funcHandle(*variables)
-        self._name = deepcopy(self.__properties['name'])
-        self.variables = deepcopy(self.__properties['variables'])
-        self._y = deepcopy(self.__properties['y'])
-        self._x = deepcopy(self.__properties['x'])
-        try:
-            self._dx = self._x[1] - self._x[0]
-        except(IndexError):
-            self._dx = 0
-        self._appendRule = deepcopy(self.__properties['appendRule'])
+        if generator is None:
+            temp = deepcopy(properties)
+            self._x = temp['x']
+            self._y = temp['y']
+            self._name = temp['name']
+            self._appendRule = temp['appendRule']
+            return
+        self._x, self._y, self._name, self._appendRule = parse(generator)
 
     @property
     def appendRule(self):
@@ -435,7 +61,7 @@ class Wave(GenericWave):
         return self._appendRule
 
     @appendRule.setter
-    def appendRule(self, appendRule=[False, False]):
+    def appendRule(self, appendRule):
         """
         Set method for append rule settings. This determines the appending
         behaviour among Waveform objects.
@@ -456,43 +82,26 @@ class Wave(GenericWave):
                         neglecting the last point (fisrt wave) and keeping the
                         first point (second wave).
                 wave(True) + wave(True) => Appending without overlapping while
-                        both the last point (fisrt wave) and the first point
-                        (second wave) are kept with an addition offset dx is
-                        set between them.
-            The default is [False, False].
-
-        Returns
-        -------
-        None.
+                        both the last 2nd point (fisrt wave) and the first
+                        point (second wave) are kept with an addition offset dx
+                        is set between them. In this mode the last point of the
+                        first wave is always neglected to preserve total span
+                        consistency.
 
         """
         self._appendRule = appendRule
 
     def __invert__(self):
         """
-        Shorthand conversion for toWaveform() method. The overlapping mode is
-        set to enabled. Denoted as ~self.
+        Shorthand conversion to waveform object. Denoted as ~self.
 
         Returns
         -------
         Waveform
-             Object with a new reference.
+            New waveform object.
 
         """
-        return self.toWaveform()
-
-    def __pos__(self):
-        """
-        Duplicate a Wave object with a new reference (also for each subentry).
-        Denoted as +self.
-
-        Returns
-        -------
-        Wave
-             Object with a new reference.
-
-        """
-        return Wave(properties=self.__properties)
+        return Waveform([self], self.name)
 
     def __neg__(self):
         """
@@ -504,11 +113,10 @@ class Wave(GenericWave):
              Object with a new reference.
 
         """
-        properties = {'name': self._name,
-                      'variables': self.variables,
-                      'y': self._y[::-1],
-                      'x': self._x,
-                      'appendRule': self._appendRule
+        properties = {'name': self.name,
+                      'y': self.y[::-1],
+                      'x': self.x,
+                      'appendRule': self.appendRule
                       }
         return Wave(properties=properties)
 
@@ -528,30 +136,26 @@ class Wave(GenericWave):
 
         """
         if not isinstance(waveObj, Wave):
-            properties = {'name': self._name,
-                          'variables': self.variables,
-                          'y': self._y + waveObj,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+            properties = {'name': self.name,
+                          'y': self.y + waveObj,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
-        variables = {
-            'function': self.__add__, 'Augend': self, 'Addend': waveObj}
         longer = max(self, waveObj)
         if self is waveObj:
             shorter = self
         else:
             shorter = [obj for obj in [self, waveObj] if obj is not longer][0]
-        x, length = longer._x, len(shorter)
+        x, length = longer.x, len(shorter)
         y = np.concatenate((
-            longer._y[:length] + shorter._y[:length], longer._y[length:]
+            longer.y[:length] + shorter.y[:length], longer.y[length:]
             ))
-        properties = {'name': self._name,
-                      'variables': variables,
+        properties = {'name': self.name,
                       'x': x,
                       'y': y,
                       'appendRule': [i or j for i, j in zip(
-                                      self._appendRule, waveObj._appendRule
+                                      self.appendRule, waveObj.appendRule
                                       )]
                       }
         return Wave(properties=properties)
@@ -577,30 +181,26 @@ class Wave(GenericWave):
 
         """
         if not isinstance(waveObj, Wave):
-            properties = {'name': self._name,
-                          'variables': self.variables,
-                          'y': self._y - waveObj,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+            properties = {'name': self.name,
+                          'y': self.y - waveObj,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
-        variables = {
-            'function': self.__sub__, 'Minuend': self, 'Subtrahend': waveObj}
         longer = max(self, waveObj)
         if self is waveObj:
             shorter = self
         else:
             shorter = [obj for obj in [self, waveObj] if obj is not longer][0]
-        x, length = longer._x, len(shorter)
+        x, length = longer.x, len(shorter)
         y = np.concatenate((
-            longer._y[:length] - shorter._y[:length], longer._y[length:]
+            longer.y[:length] - shorter.y[:length], longer.y[length:]
             ))
-        properties = {'name': self._name,
-                      'variables': variables,
+        properties = {'name': self.name,
                       'x': x,
                       'y': y,
                       'appendRule': [i or j for i, j in zip(
-                                      self._appendRule, waveObj._appendRule
+                                      self.appendRule, waveObj.appendRule
                                       )]
                       }
         return Wave(properties=properties)
@@ -626,31 +226,26 @@ class Wave(GenericWave):
 
         """
         if not isinstance(waveObj, Wave):
-            properties = {'name': self._name,
-                          'variables': self.variables,
-                          'y': self._y * waveObj,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+            properties = {'name': self.name,
+                          'y': self.y * waveObj,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
-        variables = {
-            'function': self.__mul__, 'Multiplicand': self,
-            'Multiplier': waveObj}
         longer = max(self, waveObj)
         if self is waveObj:
             shorter = self
         else:
             shorter = [obj for obj in [self, waveObj] if obj is not longer][0]
-        x, length = longer._x, len(shorter)
+        x, length = longer.x, len(shorter)
         y = np.concatenate((
-            longer._y[:length] * shorter._y[:length], longer._y[length:]
+            longer.y[:length] * shorter.y[:length], longer.y[length:]
             ))
-        properties = {'name': self._name,
-                      'variables': variables,
+        properties = {'name': self.name,
                       'x': x,
                       'y': y,
                       'appendRule': [i or j for i, j in zip(
-                                      self._appendRule, waveObj._appendRule
+                                      self.appendRule, waveObj.appendRule
                                       )]
                       }
         return Wave(properties=properties)
@@ -676,11 +271,10 @@ class Wave(GenericWave):
 
         """
         if not isinstance(number, Wave):
-            properties = {'name': self._name,
-                          'variables': self.variables,
-                          'y': self._y / number,
-                          'x': self._x,
-                          'appendRule': self._appendRule
+            properties = {'name': self.faxisname,
+                          'y': self.y / number,
+                          'x': self.x,
+                          'appendRule': self.appendRule
                           }
             return Wave(properties=properties)
         else:
@@ -703,7 +297,6 @@ class Wave(GenericWave):
 
         """
         return f"name: {self.name}\n" + \
-               f"variable: {self.variables}\n" + \
                f"dx: {self.dx}\n" + \
                f"appendRule: {self.appendRule}\n" + \
                f"ID: {id(self)}"
@@ -718,30 +311,15 @@ class Wave(GenericWave):
             Object with a new reference.
 
         """
-        properties = {'name': self._name,
-                      'variables': self.variables,
-                      'y': abs(self._y),
-                      'x': self._x,
-                      'appendRule': self._appendRule
+        properties = {'name': self.name,
+                      'y': abs(self.y),
+                      'x': self.x,
+                      'appendRule': self.appendRule
                       }
         return Wave(properties=properties)
 
-    def toWaveform(self):
-        """
-        Shorthand conversion to waveform object.
-
-        Returns
-        -------
-        Waveform
-            New waveform object.
-
-        """
-        return Waveform([self], self._name)
-
 
 class Waveform(GenericWave):
-
-    delEnd = True
 
     def __init__(self, waveObjList=[], name=''):
         """
@@ -763,11 +341,7 @@ class Waveform(GenericWave):
         """
         self._waveList = deepcopy(waveObjList)
         self._name = deepcopy(name)
-        self._y, self._x = Waveform._synthesize(self._waveList)
-        try:
-            self._dx = self._x[1] - self._x[0]
-        except(IndexError):
-            self._dx = 0
+        self._y, self._x = self.__class__._synthesize(self._waveList)
 
     @property
     def waveList(self):
@@ -794,15 +368,26 @@ class Waveform(GenericWave):
         waveObjList : list
             A list of Wave objects to be used to setup the waveform.
 
-        Returns
-        -------
-        None.
-
         """
         if not waveObjList:
             raise ValueError("waveObjList cannot be empty")
         self._waveList = waveObjList
-        self._y, self._x = Waveform._synthesize(self._waveList)
+        self._y, self._x = self.__class__._synthesize(self._waveList)
+
+    @property
+    def appendRule(self):
+        """
+        Get method for appendRule of entire waveform.
+
+        Returns
+        -------
+        list
+            A list of appendRules.
+
+        """
+        return [
+            self._waveList[0].appendRule[0], self._waveList[-1].appendRule[-1]
+            ]
 
     def __str__(self):
         """
@@ -833,15 +418,15 @@ class Waveform(GenericWave):
 
     def __invert__(self):
         """
-        Shorthand conversion for toQubitChannel() method. Denoted as ~self.
+        Shorthand conversion to QubitChannel object. Denoted as ~self.
 
         Returns
         -------
         QubitChannel
-             Object with a new reference.
+            New QubitChannel object.
 
         """
-        return self.toQubitChannel()
+        return QubitChannel(self)
 
     def __add__(self, waveObjList):
         """
@@ -858,7 +443,7 @@ class Waveform(GenericWave):
             Object with a new reference.
 
         """
-        waveObjList = Waveform._toWaveObjList(waveObjList)
+        waveObjList = self.__class__._toWaveObjList(waveObjList)
         waveList_new = self._waveList + waveObjList
         return Waveform(waveList_new)
 
@@ -887,8 +472,8 @@ class Waveform(GenericWave):
 
     def __rshift__(self, offset):
         """
-        Shorthand operator for self.offset() with add_tail=False and. Denoted
-        as self >> waveform.
+        Shorthand operator for self.offset() with positive offset. Denoted
+        as self >> offset.
 
         Parameters
         ----------
@@ -901,7 +486,7 @@ class Waveform(GenericWave):
             Offsetted result with a new reference.
 
         """
-        return self.offset(offset, add_tail=False)
+        return self.offset(offset)
 
     def __irshift__(self, waveform):
         """
@@ -923,8 +508,8 @@ class Waveform(GenericWave):
 
     def __lshift__(self, offset):
         """
-        Shorthand operator for self.offset() with add_tail=True and. Denoted as
-        self << waveform.
+        Shorthand operator for self.offset() with negative offset. Denoted as
+        self << offset.
 
         Parameters
         ----------
@@ -937,7 +522,7 @@ class Waveform(GenericWave):
             Offsetted result with a new reference.
 
         """
-        return self.offset(offset, add_tail=True)
+        return self.offset(-offset)
 
     def __ilshift__(self, waveform):
         """
@@ -1083,45 +668,40 @@ class Waveform(GenericWave):
         None.
 
         """
-        x, _ = [
-            self + waveform if not (use_1st_head ^ align_2nd_head)
-            else max(self, waveform)
-            ][0].xy
-        # distinguish longer & shorter waveform
-        longer = max(self, waveform)
-        shorter = [obj for obj in [self, waveform] if obj is not longer][0]
-        # use 1st/last element to offset
-        len_longer = longer.span
-        len_shorter = shorter.span
-        appendLength = abs(len_longer - len_shorter) if not (
-            use_1st_head ^ align_2nd_head) else len_longer
-        # modify each length
+        if waveform == self:
+            return
+        samp_rate = self.df
         if use_1st_head ^ align_2nd_head:
-            longer_newList = longer.offset(
-                len_shorter, shorter is self if use_1st_head
-                else longer is self)._waveList
-            shorter_newList = shorter.offset(
-                    appendLength, longer is self if use_1st_head
-                    else shorter is self)._waveList
-            longer.waveList = longer_newList
+            addListA = self.__class__._nullBlock(
+                self.span, samp_rate, self.appendRule)
+            addListB = self.__class__._nullBlock(
+                waveform.span, samp_rate, waveform.appendRule)
+            if use_1st_head:
+                # print('T-F')
+                self.waveList = addListB + self.waveList
+                waveform.waveList = waveform.waveList + addListA
+            else:
+                # print('F-T')
+                self.waveList = self.waveList + addListB
+                waveform.waveList = addListA + waveform.waveList
         else:
-            shorter_newList = shorter.offset(
-                appendLength, use_1st_head)._waveList
-        shorter.waveList = shorter_newList
+            span = round(abs(self.span - waveform.span),
+                         self.__class__.EFF_TIME_DIGIT)
+            # distinguish longer & shorter waveform
+            longer = max(self, waveform)
+            shorter = min(self, waveform)
+            if use_1st_head:
+                # print('T-T')
+                addList = self.__class__._nullBlock(
+                    span, samp_rate, [True, longer.appendRule[-1]])
+                shorter.waveList = shorter.waveList + addList
+            else:
+                # print('F-F')
+                addList = self.__class__._nullBlock(
+                    span, samp_rate, [longer.appendRule[0], True])
+                shorter.waveList = addList + shorter.waveList
 
-    def toQubitChannel(self):
-        """
-        Shorthand conversion to QubitChannel object.
-
-        Returns
-        -------
-        QubitChannel
-            New QubitChannel object.
-
-        """
-        return QubitChannel(self)
-
-    def offset(self, offset=0., add_tail=False):
+    def offset(self, offset=0.):
         """
         Backend function to offset the first or the last Wave object in a
         waveform.
@@ -1130,32 +710,42 @@ class Waveform(GenericWave):
         ----------
         offset : float, optional
             Offset by a value with the same unit as x. The default is 0.
-        add_tail : boolean, optional
-            True to append 0s at tail, at head otherwise. The default is False.
 
         Returns
         -------
         None.
 
         """
-        points = int(offset / self.dx+1)
-        if points < 1:
+        offset = round(offset, self.__class__.EFF_TIME_DIGIT)
+        if abs(offset) < self.dx:
             return self
-        if add_tail:
-            appendRule = [self._waveList[-1].appendRule[-1], True]
+        span = abs(offset)
+        samp_rate = self.df
+        if offset > 0:
+            return Waveform(
+                self.__class__._nullBlock(
+                    span, samp_rate, [self.appendRule[0], False]
+                    ) + self.waveList
+                )
         else:
-            appendRule = [True, self._waveList[0].appendRule[0]]
-        new_waveList = (
-            self._waveList + Waveform._nullBlock(
-                offset, points, appendRule) if add_tail else
-            Waveform._nullBlock(
-                offset, points, appendRule) + self._waveList
-            )
-        return Waveform(new_waveList)
+            return Waveform(
+                self.waveList + self.__class__._nullBlock(
+                    span, samp_rate, [False, self.appendRule[-1]]
+                    )
+                )
+
+    def fill_total_point(self, total_point=0):
+        add_point = total_point - len(self)
+        if add_point <= 0:
+            return self
+        span = round((add_point + 1) * self.dx, self.__class__.EFF_TIME_DIGIT)
+        return self << span
 
     @classmethod
-    def _nullBlock(
-            cls, span=.0, points=0, appendRule=[False, False]):
+    def _nullBlock(cls,
+                   span=.0,
+                   sampling_rate=1e9,
+                   appendRule=[False, False]):
         """
         Generate 0s to fill up empty space.
 
@@ -1165,8 +755,8 @@ class Waveform(GenericWave):
             Waveform class object.
         span : float, optional
             Time span. The default is .0.
-        points : int, optional
-            Number of points. The default is 0.
+        sampling_rate : float, optional
+            Sampling rate for DAC. The default is 1e9 (Suggested).
         appendRule : list, optional
             List of append rules. The default is [False, False].
 
@@ -1176,22 +766,15 @@ class Waveform(GenericWave):
             list for Waveform object generation.
 
         """
-        variables = {'function': cls._nullBlock,
-                     'span': span,
-                     'points': points}
-        end, fix = None, 0
-        if cls.delEnd:
-            end = -1
-            fix = 1
-        return [Wave(properties={'name': 'null',
-                                 'variables': variables,
-                                 'x': np.linspace(0, span, points)[:end],
-                                 'y': np.zeros(points-fix),
-                                 'appendRule': appendRule})]
+        generator = setFunc(
+            'const', [0], span, sampling_rate, 'null', appendRule
+            )
+        return [Wave(generator)]
 
     @classmethod
     def _synthesize(cls, waveList):
         """
+        Modded in V6
         Backend function to compile the list of Wave objects into a complete
         waveform (pulse train).
 
@@ -1215,39 +798,48 @@ class Waveform(GenericWave):
         y = np.array([])
         x = np.array([])
         offset = 0
+        delEnd = 0
         for waveObj in waveList:
-            if x.size == 0:
-                y = waveObj._y
-                x = waveObj._x
-                if x.size == 0:
-                    continue
-                try:
-                    offset = x[-1]
-                    dx = x[1] - x[0]
-                except(IndexError):
-                    dx = 0
+            if waveObj.x.size == 0:  # skip null waves
+                continue
+            if x.size == 0:  # initial null filling
+                y = waveObj.y
+                x = waveObj.x
+                offset = x[-1]
                 previous = waveObj
                 continue
+            # concatenate according to appendrules
             leftRule = previous.appendRule[1]
             rightRule = waveObj.appendRule[0]
+            if leftRule and rightRule:
+                delEnd = 1
             if leftRule ^ rightRule:
                 if leftRule:
-                    y = np.hstack([y, waveObj._y[1:]])
+                    # print('T-F')
+                    y = np.hstack([y[:len(y)-delEnd], waveObj.y[1:]])
                 else:
-                    y = np.hstack([y[:-1], waveObj._y])
-                x = np.hstack([x, waveObj._x[1:] + offset])
+                    # print('F-T')
+                    y = np.hstack([y[:-1-delEnd], waveObj.y])
+                x = np.hstack([x[:len(x)-delEnd], waveObj.x[1:] + offset])
             else:
                 if leftRule:
-                    y = np.hstack([y, waveObj._y])
-                    x = np.hstack([x, waveObj._x + offset + dx])
+                    # print('T-T')
+                    y = np.hstack([y[:len(y)-delEnd], waveObj.y])
+                    x = np.hstack(
+                        [x[:len(x)-delEnd], waveObj.x + offset]
+                        )
                 else:
-                    y = np.hstack([y[:-1],
-                                   np.array([(y[-1] + waveObj._y[0])/2]),
-                                   waveObj._y[1:]])
-                    x = np.hstack([x, waveObj._x[1:] + offset])
+                    # print('F-F')
+                    y = np.hstack([y[:-1-delEnd],
+                                   np.array([(y[-1-delEnd] + waveObj.y[0])/2]),
+                                   waveObj.y[1:]])
+                    x = np.hstack([x[:len(x)-delEnd], waveObj.x[1:] + offset])
             offset = x[-1]
             previous = waveObj
-        return y, x
+            delEnd = 0
+        return y[:len(y)-delEnd], np.round(
+            x[:len(x)-delEnd], cls.EFF_TIME_DIGIT
+            )
 
     @classmethod
     def _toWaveObjList(cls, waveform):
@@ -1276,52 +868,13 @@ class Waveform(GenericWave):
         else:
             raise TypeError("Incorrect data type")
 
-    @classmethod
-    def set_delEnd(cls, toggle=True):
-        """
-        Set method for delEnd attribute.
-
-        Parameters
-        ----------
-        cls : Waveform class
-            Waveform class object.
-        toggle : boolean, optional
-            Set True to delete tail index for all _nullBlock genertions. The
-            default is True.
-
-        Returns
-        -------
-        None.
-
-        """
-        cls.delEnd = toggle
-
-    @classmethod
-    def get_delEnd(cls):
-        """
-        Get method for delEnd attribute.
-
-        Parameters
-        ----------
-        cls : Waveform class
-            Waveform class object.
-
-        Returns
-        -------
-        boolean
-            True if delEnd mode is on.
-
-        """
-        return cls.delEnd
-
 
 class QubitChannel(GenericWave):
 
     def __init__(self, *waveforms):
         """
-        An interface for qubit-wise manipulation of waveform ordering. Each
-        waveform is assigned to an independent wire and alignment is performed
-        among wires.
+        An interface for single qubit waveform control. Each waveform is
+        assigned to an independent wire and alignment is performed among wires.
 
         Parameters
         ----------
@@ -1334,18 +887,20 @@ class QubitChannel(GenericWave):
             New QubitChannel object.
 
         """
-        self._wires = [*waveforms]
-        self._wire_names = [
-            waveform._name for waveform in self._wires
-            ]
-        QubitChannel._align(self)
-        self._x = self._wires[0]._x
-        try:
-            self._dx = self._x[1] - self._x[0]
-        except(IndexError):
-            self._dx = 0
-        self._y = [self._wires[i]._y for i in range(len(self._wires))]
+        self._wires = np.array(waveforms)
+        self._wire_names = [waveform.name for waveform in self._wires]
+        self.__class__.align(self)
         self._name = ''
+
+    @property
+    def x(self):
+        self._x = self._wires[0].x
+        return self._x
+
+    @property
+    def y(self):
+        self._y = [waveform.y for waveform in self._wires]
+        return self._y
 
     @property
     def wire_names(self):
@@ -1376,7 +931,26 @@ class QubitChannel(GenericWave):
 
         """
         self._wire_names = nameList + [
-                '' for i in range(len(self._wire_names) - len(nameList))]
+                '' for i in range(len(self._wire_names) - len(nameList))
+                ]
+
+    def get_wire(self, wire_name=''):
+        """
+        Get Waveform object from specified wirename.
+
+        Parameters
+        ----------
+        wire_name : string, optional
+            Name of the wire. The default is ''.
+
+        Returns
+        -------
+        Waveform
+            Corresponding Waveform object.
+
+        """
+        idx = self._wire_names.index(wire_name)
+        return self._wires[idx]
 
     def __str__(self):
         """
@@ -1389,9 +963,9 @@ class QubitChannel(GenericWave):
 
         """
         return f"name: {self.name}\n" + \
-            f"wires: {self._wires}\n" + \
             f"wire names: {self._wire_names}\n" + \
-            f"dx: {self.dx}\n" + \
+            f"point number: {len(self)}\n" + \
+            f"span: {self.span}\n" + \
             f"ID: {id(self)}"
 
     def __add__(self, qcObj):
@@ -1410,10 +984,10 @@ class QubitChannel(GenericWave):
 
         """
         if len(self._wires) != len(qcObj._wires):
-            raise ValueError("wire number mismatch")
-        wires = [wireA + wireB for wireA, wireB in zip(
-                self._wires, qcObj._wires)]
-        return QubitChannel(*wires)
+            raise ValueError('Wire concatenation with unequal size arrays')
+        temp = QubitChannel(*(self._wires + qcObj._wires))
+        temp.wire_names = self.wire_names
+        return temp
 
     def __mul__(self, num):
         """
@@ -1430,8 +1004,9 @@ class QubitChannel(GenericWave):
             Appended QubitChannel object with a new reference.
 
         """
-        wires = [wire * num for wire in self._wires]
-        return QubitChannel(*wires)
+        temp = QubitChannel(*(self._wires * num))
+        temp.wire_names = self.wire_names
+        return temp
 
     def __rmul__(self, other):
         # Image method for __mul__
@@ -1478,7 +1053,7 @@ class QubitChannel(GenericWave):
 
         Parameters
         ----------
-        waveformList : llist or QubitChannel or Waveform
+        waveformList : list or QubitChannel or Waveform
             List of Waveforms (or a Waveform object) or a QubitChannel object.
 
         Returns
@@ -1487,11 +1062,37 @@ class QubitChannel(GenericWave):
             Appended QubitChannel object with a new reference.
 
         """
-        waveformList = QubitChannel._toWaveformObjList(waveformList)
-        wires = self._wires + waveformList
+        waveformList = self.__class__._toWaveformObjList(waveformList)
+        return QubitChannel(*self._wires, *waveformList)
+
+    def add_null_wire(self, *wireIndex):
+        """
+        Add null wires to QubitChannel object.
+
+        Parameters
+        ----------
+        *wireIndex : int
+            Indices to be inserted with null waveform. Must smaller than the
+            number of wires.
+
+        Returns
+        -------
+        QubitChannel
+            Appended QubitChannel object with a new reference.
+
+        """
+        nullblock = Waveform._nullBlock(self.span, self.df)
+        wires = np.insert(self._wires, wireIndex, nullblock)
         return QubitChannel(*wires)
 
-    def plot(self, wire_indices=[], size=[6.4, 4.8], figure_name=''):
+    def plot(self,
+             wire_indices=[],
+             size=[6.4, 4.8],
+             figure_name='',
+             allInOne=False,
+             toByteStream=False,
+             showSizeInfo=True
+             ):
         """
         A quick plot among wires of a QubitChannel object.
 
@@ -1501,83 +1102,135 @@ class QubitChannel(GenericWave):
             List of indices of wires to be examined. The default is [].
         size : list, optional
             Size of each subplot. The default is [6.4, 4.8].
+        figure_name : str, optional
+            Name of figure. The default is ''.
+        allInOne : bool, optional
+            Set True to put all traces into the same subplot. The default is
+            False.
+        toByteStream : bool, optional
+            Set True to convert plot into byte stream without plotting. The
+            default is False.
+        showSizeInfo : bool, optional
+            Set True to show plot size during plot creation. The default is
+            True.
 
         Returns
         -------
-        axisObjArr : list
-            List of 2D line objects.
+        fig/BytesIO : matplotlib.lines.Line2D or BytesIO object
+            Figure of byte stream object.
 
         """
         if not wire_indices:
             wire_indices = range(len(self._wires))
         ydict_list = [{}] * len(wire_indices)
         for idx, i in zip(wire_indices, range(len(wire_indices))):
-            ydict_list[i] = QubitChannel.axis(
-                self._wire_names[idx], 'amplitude', self._y[idx], False
+            ydict_list[i] = axis(
+                self._wire_names[idx], 'amplitude', self._wires[idx].y, False
                 )
         if not figure_name:
-            figure_name = self._name
-        return QubitChannel.draw(
-            self.xaxis, ydict_list, figure_name=figure_name, size=size
+            figure_name = self.name
+        return draw(
+            self.xaxis, ydict_list, figure_name=figure_name, size=size,
+            allInOne=allInOne, toByteStream=toByteStream,
+            showSizeInfo=showSizeInfo
             )
 
-    def psdplot(self, wire_indices=[], size=[6.4, 4.8], dBm_scale=True):
-        """
-        Plot PSD of the signal.
-
-        Parameters
-        ----------
-        wire_indices : list, optional
-            List of indices of wires to be examined. The default is [].
-        size : list, optional
-            Size of each subplot. The default is [6.4, 4.8].
-        dBm_scale : boolean, optional
-            Show plot in dBm scale. The default is True.
-
-        Returns
-        -------
-        handle : matplotlib.lines.Line2D
-            Plot handler object.
-
-        """
-        if not wire_indices:
-            wire_indices = range(len(self._wires))
-        ydict_list = [{}] * len(wire_indices)
-        for idx, i in zip(wire_indices, range(len(wire_indices))):
-            f, PSD = self._wires[idx].psd(dBm_scale)
-            xdict = {
-                'name': '', 'label': 'frequency (Hz)',
-                'data': f, 'log': False
-                }
-            ydict_list[i] = {
-                'name': self._wire_names[idx], 'label': 'amplitude (Mag/Hz)',
-                'data': PSD, 'log': False
-                }
-            if dBm_scale:
-                ydict_list[i]['label'] = 'amplitude (dBm/Hz)'
-        return QubitChannel.draw(xdict, ydict_list, 'PSD', size=size)
-
     @classmethod
-    def _align(cls, qcObj):
+    def align(cls, qcObj, ref=None):
         """
-        Backend method to perform wire-wise alignment.
+        Backend method to perform wire-wise alignment. If no reference object
+        is assigned, the longest wire in the QubitChannel object will be
+        selected.
 
         Parameters
         ----------
         cls : QubitChannel class
             QubitChannel class.
-        qcObj : QubitChannel
+        qcObj : QubitChannel, Waveform, Wave
             QubitChannel object with wires to be aligned.
+        ref : Wave/Waveform/QubitChannel/float, optional
+            Reference to be aligned with. The float datatype corresponds to
+            the span while others correspond to GenericWave children class
+            object. The default is None.
 
         Returns
         -------
         None.
 
         """
-        longest = max(qcObj._wires, key=len)
+        if ref:
+            if isinstance(ref, float):
+                longest = Waveform(Waveform._nullBlock(ref, qcObj.df))
+            else:
+                longest = Waveform(Waveform._nullBlock(ref.span, qcObj.df))
+        else:
+            longest = max(qcObj._wires, key=len)
         for waveform in qcObj._wires:
             if waveform is not longest:
                 longest <<= waveform
+
+    @classmethod
+    def alignQubitChannels(cls, *qcObjList):
+        """
+        Align all QubitChannel objects.
+
+        Parameters
+        ----------
+        cls : QubitChannel
+            QubitChannel class.
+        *qcObjList : QubitChannel
+            QubitChannel objects for alignment.
+
+        Returns
+        -------
+        QubitChannel
+            Aligned QubitChannel objects with original references.
+
+        """
+        if len(qcObjList) == 1:
+            return *qcObjList,
+        longest = max(qcObjList, key=len)
+        for qcObj in qcObjList:
+            cls.align(qcObj, longest)
+        return *qcObjList,
+
+    @classmethod
+    def null(cls, spanRef, wireRef, default_sampling_rate=1e9):
+        """
+        Generate null QubitChannel object with reference objects.
+
+        Parameters
+        ----------
+        cls : QubitChannel
+            QubitChannel class.
+        spanRef : float, QubitChannel
+            Reference object to determine the span. The float datatype
+            corresponds to the span while others correspond to GenericWave
+            children class object.
+        wireRef : int, QubitChannel
+            Reference object to determine the number of wires.The int datatype
+            corresponds to the number of wires while others correspond to
+            GenericWave children class object.
+
+        Returns
+        -------
+        QubitChannel
+            QubitChannel object with a new reference.
+
+        """
+        if isinstance(spanRef, float):
+            nullblock = Waveform(Waveform._nullBlock(
+                spanRef, default_sampling_rate
+                ))
+        else:
+            nullblock = Waveform(Waveform._nullBlock(
+                spanRef.span, spanRef.df
+                ))
+        if isinstance(wireRef, int):
+            wirenum = wireRef
+        else:
+            wirenum = len(wireRef._wires)
+        return QubitChannel(*([nullblock] * wirenum))
 
     @classmethod
     def _toWaveformObjList(cls, qcObj):
@@ -1606,7 +1259,3 @@ class QubitChannel(GenericWave):
             return qcObj
         else:
             raise TypeError("Incorrect data type")
-
-
-if __name__ == '__main__':
-    pass

@@ -397,3 +397,10 @@ def parse(generator: dict):
     # appendRule
     appendRule = generator['appendRule']
     return x, y, name, appendRule
+
+
+if __name__ == '__main__':
+    # a = setFunc('gaussian', [5e-6, 1e-6], 10e-6)
+    a = setFunc('gaussian', {'peak_x': 5e-6, 'sigma': 1e-6}, 10e-6)
+    x, y, name, appendRule = parse(a)
+    pass

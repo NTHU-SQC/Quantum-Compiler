@@ -934,14 +934,14 @@ class QubitChannel(GenericWave):
                 '' for i in range(len(self._wire_names) - len(nameList))
                 ]
 
-    def get_wire(self, wire_name=''):
+    def __getitem__(self, wire_name):
         """
         Get Waveform object from specified wirename.
 
         Parameters
         ----------
-        wire_name : string, optional
-            Name of the wire. The default is ''.
+        wire_name : string/int
+            Name or index of the wire.
 
         Returns
         -------
@@ -949,8 +949,9 @@ class QubitChannel(GenericWave):
             Corresponding Waveform object.
 
         """
-        idx = self._wire_names.index(wire_name)
-        return self._wires[idx]
+        if isinstance(wire_name, str):
+            wire_name = self._wire_names.index(wire_name)
+        return self._wires[wire_name]
 
     def __str__(self):
         """
@@ -1259,7 +1260,3 @@ class QubitChannel(GenericWave):
             return qcObj
         else:
             raise TypeError("Incorrect data type")
-
-
-if __name__ == '__main__':
-    pass

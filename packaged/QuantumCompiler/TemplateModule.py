@@ -608,9 +608,24 @@ class GenericGate(object):
             f"qubit names: {list(self._qubitDict.keys())}\n" + \
             f"ID: {id(self)}"
 
-    def __matmul__(self, qbname):
+    def __setitem__(self, qbname, qbcObj):
         """
-        Return QubitChannel object according to specified name.
+        Assign a QubitChannel object to a qubit according to a specified name.
+
+        Parameters
+        ----------
+        qbname : str
+            Name of qubit.
+        qbcObj : QubitChannel
+            QubitChannel object.
+
+        """
+        
+        self._qubitDict[qbname] = qbcObj
+
+    def __getitem__(self, qbname):
+        """
+        Return a QubitChannel object according to a specified name.
 
         Parameters
         ----------

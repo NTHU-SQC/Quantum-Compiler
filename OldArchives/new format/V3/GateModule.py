@@ -16,7 +16,7 @@ from WaveModule import *
 
 
 class Gate(GenericGate):
-
+    
     def __init__(self, parameters):
         # build waveforms
         
@@ -24,3 +24,4 @@ class Gate(GenericGate):
         
         # construct gate
         super().__init__()
+
