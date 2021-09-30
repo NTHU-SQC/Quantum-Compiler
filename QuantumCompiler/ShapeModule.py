@@ -283,6 +283,76 @@ def square(x: np.array, start: float, flat: float):
         ))
 
 
+def pwm(x: np.array,
+        period: float, on_ratio: float, delay: float = .0,
+        onval: float = 1., offval: float = .0
+        ):
+    """
+    Pulse Width Modulation (PWM) generating function specified with 'On' ratio.
+
+    Parameters
+    ----------
+    x : np.array
+        Wave event timeline, start from 0 is demanded.
+    period : float
+        Period of PWM, equal to the inverse of repetition rate.
+    on_ratio : float
+        'On' ratio between 0 & 1.
+    delay : float, optional
+        Time delay before pwm pulse. The default is .0.
+    onval : float, optional
+        'On' value. The default is 1..
+    offval : float, optional
+        'Off' value. The default is .0.
+
+    Returns
+    -------
+    np.array
+        Output wave values.
+
+    """
+    f = np.vectorize(
+        lambda x_val:
+            onval if (x_val - delay) % period < on_ratio * period else offval
+        )
+    return f(x)
+
+
+def pwm2(x: np.array,
+         period: float, on_span: float, delay: float = .0,
+         onval: float = 1., offval: float = .0
+         ):
+    """
+    Pulse Width Modulation (PWM) generating function specified with 'On' time.
+
+    Parameters
+    ----------
+    x : np.array
+        Wave event timeline, start from 0 is demanded.
+    period : float
+        Period of PWM, equal to the inverse of repetition rate.
+    on_span : float
+        'On' time span.
+    delay : float, optional
+        Time delay before pwm pulse. The default is .0.
+    onval : float, optional
+        'On' value. The default is 1..
+    offval : float, optional
+        'Off' value. The default is .0.
+
+    Returns
+    -------
+    np.array
+        Output wave values.
+
+    """
+    f = np.vectorize(
+        lambda x_val:
+            onval if (x_val - delay) % period < on_span else offval
+        )
+    return f(x)
+
+
 def get_x(span: float = .0, sampling_rate: float = 1e9):
     """
     Formatted timeline creation.
@@ -315,6 +385,8 @@ function_mappings = {
     'cosine': cosine,
     'cosine2': cosine2,
     'square': square,
+    'pwm': pwm,
+    'pwm2': pwm2,
     }
 
 
