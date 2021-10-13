@@ -12,7 +12,7 @@ import numpy as np
 from copy import deepcopy
 
 from .ShapeModule import parse, setFunc
-from .TemplateModule import GenericWave, axis, draw
+from .TemplateModule import GenericWave, Comparables, axis, draw
 
 
 class Wave(GenericWave):
@@ -869,7 +869,7 @@ class Waveform(GenericWave):
             raise TypeError("Incorrect data type")
 
 
-class QubitChannel(GenericWave):
+class QubitChannel(Comparables):
 
     def __init__(self, *waveforms):
         """

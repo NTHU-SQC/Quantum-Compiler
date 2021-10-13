@@ -5,8 +5,6 @@ Created on Mon Sep  6 02:01:34 2021
 @author: Alaster
 """
 
-from scipy.signal import welch
-from scipy.fft import fft, ifft, fftfreq, fftshift
 from copy import deepcopy
 import pickle
 import numpy as np
@@ -224,22 +222,9 @@ def get_path(ext='', title='Select item'):
         title=title)
 
 
-class GenericWave(object):
+class Comparables():
     EFF_FREQ_DIGIT = 5
     EFF_TIME_DIGIT = 0 + 9
-
-    def __init__(self):
-        # fundamental attributes
-        self._x
-        self._y
-        self._name
-        pass
-
-    @property
-    def span(self):
-        return round(
-            self.x[-1] - self.x[0], self.__class__.EFF_TIME_DIGIT
-            )
 
     @property
     def name(self):
@@ -250,27 +235,19 @@ class GenericWave(object):
         self._name = name
 
     @property
+    def span(self):
+        return round(
+            self.x[-1] - self.x[0], self.__class__.EFF_TIME_DIGIT
+            )
+
+    @property
     def x(self):
         return self._x
 
     @property
-    def y(self):
-        return self._y
-
-    @property
-    def f(self):
-        return fftfreq(len(self), self.dx)
-
-    @property
-    def yf(self):
-        return fft(self.y)
-
-    @property
     def dx(self):
         try:
-            return round(
-                self.x[1] - self.x[0], self.__class__.EFF_TIME_DIGIT
-                )
+            return round(self.x[1] - self.x[0], self.__class__.EFF_TIME_DIGIT)
         except(IndexError):
             return 0
 
@@ -285,14 +262,6 @@ class GenericWave(object):
     @property
     def xaxis(self):
         return axis('t', 'time (s)', self.x, False)
-
-    @property
-    def faxis(self):
-        return axis('t', 'time (s)', fftshift(self.f), False)
-
-    @property
-    def yfaxis(self):
-        return axis('t', 'time (s)', fftshift(self.yf), False)
 
     def __len__(self):
         """
@@ -444,6 +413,13 @@ class GenericWave(object):
         """
         return len(self) > len(gwObj)
 
+
+class GenericWave(Comparables):
+
+    @property
+    def y(self):
+        return self._y
+
     def __matmul__(self, xList=[]):
         """
         Return the corresponding y at the indicated x by interpolation. Denoted
@@ -487,85 +463,8 @@ class GenericWave(object):
             }]
         return draw(xdict, ydict_list, figure_name, toByteStream=toByteStream)
 
-    def diff(self, n=1):
-        """
-        Calculate y n-th derivative using fft method.
 
-        Parameters
-        ----------
-        n : int, optional
-            order of differentiation. The default is 1.
-
-        Returns
-        -------
-        numpy.array
-            y derivative of n-th order.
-
-        """
-        return ifft((1j * 2 * np.pi * self.f)**n * fft(self.y)).real
-
-    def psd(self, dBm_scale=True):
-        """
-        Calculate PSD using FFT.
-        ref=https://stackoverflow.com/questions/20165193/fft-normalization
-
-        #######################################################
-        # FFT using Welch method
-        # windows = np.ones(nfft) - no windowing
-        # if windows = 'hamming', etc.. this function will
-        # normalize to an equivalent noise bandwidth (ENBW)
-        #######################################################
-
-        Returns
-        -------
-        list
-            FFT outputs, including frequency, lineaer scale psd.
-
-        """
-        nfft = len(self)  # fft size same as signal size
-        f, Pxx_den = welch(
-            self.y, fs=self.df, window=np.ones(nfft),
-            nperseg=nfft, scaling='density'
-            )
-        if dBm_scale:
-            return f, 10.0 * np.log10(Pxx_den)
-        return f, Pxx_den
-
-    def psdplot(self, dBm_scale=True, toByteStream=False):
-        """
-        Plot PSD of the signal.
-
-        Parameters
-        ----------
-        dBm_scale : boolean, optional
-            Show plot in dBm scale. The default is True.
-        toByteStream : bool, optional
-            Set True to convert plot into byte stream without plotting. The
-            default is False.
-
-        Returns
-        -------
-        handle : matplotlib.lines.Line2D
-            Plot handler object.
-
-        """
-        f, PSD = self.psd(dBm_scale)
-        xdict = axis('', 'frequency (Hz)', f, False)
-        ydict_list = [axis(self.name, 'amplitude (Mag/Hz)', PSD, False)]
-        if dBm_scale:
-            ydict_list[0]['label'] = 'amplitude (dBm/Hz)'
-        return draw(xdict, ydict_list, 'PSD', toByteStream=toByteStream)
-
-    @classmethod
-    def save(cls, *args):
-        save('.wf', *args)
-
-    @classmethod
-    def load(cls, *args):
-        return load('.wf', *args)
-
-
-class GenericGate(object):
+class GenericGate():
 
     def __init__(self, *qcObj):
         temp = deepcopy(qcObj)
@@ -639,11 +538,3 @@ class GenericGate(object):
 
         """
         return self._qubitDict[qbname]
-
-    @classmethod
-    def save(cls, *args):
-        save('.gate', *args)
-
-    @classmethod
-    def load(cls, *args):
-        return load('.gate', *args)

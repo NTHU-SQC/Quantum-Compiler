@@ -427,7 +427,8 @@ def setFunc(
         'X': {'span': span, 'sampling_rate': sampling_rate},
         'Y': dict(zip(argNames, funcArg)),
         'name': name,
-        'appendRule': appendRule
+        'appendRule': appendRule,
+        'type': 'generator'
         }
     return generator
 

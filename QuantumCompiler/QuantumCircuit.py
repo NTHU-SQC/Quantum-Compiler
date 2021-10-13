@@ -23,10 +23,10 @@ from tkinter import Label, Button
 from PIL import ImageTk, Image
 
 from .WaveModule import QubitChannel
-from .TemplateModule import save, load, simple_scrollable_window
+from .TemplateModule import simple_scrollable_window
 
 
-class QuantumCircuit(object):
+class QuantumCircuit():
 
     def __init__(self, qubit={}, blockNum=1, auxiliary={}):
         """
@@ -274,10 +274,13 @@ class QuantumCircuit(object):
         table = table[:, row_bool]
         # align QubitChannel objects in the table column by column
         for time_idx in range(len(table[0, :])):
-            diagram[table[:, time_idx], time_idx
-                    ] = QubitChannel.alignQubitChannels(
-                        *diagram[table[:, time_idx], time_idx]
-                        )
+            QubitChannel.alignQubitChannels(*diagram[
+                table[:, time_idx], time_idx
+                ])
+            # diagram[table[:, time_idx], time_idx
+            #         ] = QubitChannel.alignQubitChannels(
+            #             *diagram[table[:, time_idx], time_idx]
+            #             )
         # replace nans with null QubitChannel objects
         for qubit_idx, row in enumerate(table):
             for time_idx, flag in enumerate(row):
@@ -350,11 +353,3 @@ class QuantumCircuit(object):
         qubit = self.get_index(idxTuple[0])
         time = idxTuple[1]
         return self.diagram[qubit, time]
-
-    @classmethod
-    def save(cls, *args):
-        save('.qckt', *args)
-
-    @classmethod
-    def load(cls, *args):
-        return load('.qckt', *args)
