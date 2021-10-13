@@ -1,0 +1,20 @@
+# PynSource Version 1.2
+{'type':'meta', 'info1':'Lorem ipsum dolor sit amet, consectetur adipiscing elit is latin. Comments are saved.'}
+{'type':'umlshape', 'id':'Gate', 'x':977, 'y':740, 'width':66, 'height':59, 'attrs': '', 'meths': '__init__'}
+{'type':'umlshape', 'id':'GenericGate', 'x':960, 'y':466, 'width':98, 'height':173, 'attrs': '_name|_qubitDict|numOfQubits|qubitDict|qubitNames', 'meths': '__getitem__|__init__|__setitem__|__str__'}
+{'type':'umlshape', 'id':'QuantumCircuit', 'x':1198, 'y':473, 'width':122, 'height':290, 'attrs': '_auxiliaryDict|_name|_qubitDict|auxiliaryDict|compildDiagram|compiled|diagram|gateName|qubitDict', 'meths': '__getitem__|__init__|__matmul__|__setitem__|assign|compile|get_index|plot|view'}
+{'type':'umlshape', 'id':'Namables', 'x':592, 'y':23, 'width':74, 'height':72, 'attrs': '_name|name', 'meths': ''}
+{'type':'umlshape', 'id':'Comparables', 'x':69, 'y':20, 'width':108, 'height':264, 'attrs': 'EFF_FREQ_DIGIT|EFF_TIME_DIGIT|df|dx|span|x|xaxis', 'meths': '__eq__|__ge__|__gt__|__le__|__len__|__lt__|__max__|__min__|__ne__'}
+{'type':'umlshape', 'id':'GenericWave', 'x':588, 'y':322, 'width':98, 'height':95, 'attrs': 'y', 'meths': '__matmul__|plot'}
+{'type':'umlshape', 'id':'Wave', 'x':402, 'y':482, 'width':94, 'height':290, 'attrs': '_appendRule|_name|_x|_y|appendRule', 'meths': '__abs__|__add__|__init__|__invert__|__mul__|__neg__|__radd__|__rmul__|__rsub__|__rtruediv__|__str__|__sub__|__truediv__'}
+{'type':'umlshape', 'id':'Waveform', 'x':695, 'y':472, 'width':122, 'height':407, 'attrs': '_name|_waveList|_y|appendRule|waveList', 'meths': '__add__|__ilshift__|__init__|__invert__|__irshift__|__lshift__|__mul__|__pos__|__rmul__|__rshift__|__str__|_nullBlock|_synthesize|_toWaveObjList|alignwith|fill_total_point|insert|offset|permute|remove|replace|split'}
+{'type':'umlshape', 'id':'QubitChannel', 'x':70, 'y':458, 'width':106, 'height':264, 'attrs': '_name|_wire_names|_wires|_x|_y|wire_names|x|y', 'meths': '__add__|__getitem__|__init__|__matmul__|__mul__|__rmul__|__str__|__truediv__'}
+{'type':'edge', 'id':'Gate_to_GenericGate', 'source':'Gate', 'target':'GenericGate', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'QuantumCircuit_to_Namables', 'source':'QuantumCircuit', 'target':'Namables', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'GenericWave_to_Comparables', 'source':'GenericWave', 'target':'Comparables', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'GenericWave_to_Namables', 'source':'GenericWave', 'target':'Namables', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'GenericGate_to_Namables', 'source':'GenericGate', 'target':'Namables', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'Wave_to_GenericWave', 'source':'Wave', 'target':'GenericWave', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'Waveform_to_GenericWave', 'source':'Waveform', 'target':'GenericWave', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'QubitChannel_to_Namables', 'source':'QubitChannel', 'target':'Namables', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'QubitChannel_to_Comparables', 'source':'QubitChannel', 'target':'Comparables', 'uml_edge_type': 'generalisation'}
