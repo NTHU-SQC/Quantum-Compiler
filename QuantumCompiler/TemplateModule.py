@@ -222,9 +222,7 @@ def get_path(ext='', title='Select item'):
         title=title)
 
 
-class Comparables():
-    EFF_FREQ_DIGIT = 5
-    EFF_TIME_DIGIT = 0 + 9
+class Namables():
 
     @property
     def name(self):
@@ -233,6 +231,11 @@ class Comparables():
     @name.setter
     def name(self, name=''):
         self._name = name
+
+
+class Comparables():
+    EFF_FREQ_DIGIT = 5
+    EFF_TIME_DIGIT = 0 + 9
 
     @property
     def span(self):
@@ -414,7 +417,7 @@ class Comparables():
         return len(self) > len(gwObj)
 
 
-class GenericWave(Comparables):
+class GenericWave(Comparables, Namables):
 
     @property
     def y(self):
@@ -464,21 +467,13 @@ class GenericWave(Comparables):
         return draw(xdict, ydict_list, figure_name, toByteStream=toByteStream)
 
 
-class GenericGate():
+class GenericGate(Namables):
 
     def __init__(self, *qcObj):
         temp = deepcopy(qcObj)
         temp = temp[0].__class__.alignQubitChannels(*temp)
         self._qubitDict = {qcObj0.name: qcObj0 for qcObj0 in temp}
         self._name = ''
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name=''):
-        self._name = name
 
     @property
     def numOfQubits(self):

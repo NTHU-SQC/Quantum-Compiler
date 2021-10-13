@@ -23,10 +23,10 @@ from tkinter import Label, Button
 from PIL import ImageTk, Image
 
 from .WaveModule import QubitChannel
-from .TemplateModule import simple_scrollable_window
+from .TemplateModule import simple_scrollable_window, Namables
 
 
-class QuantumCircuit():
+class QuantumCircuit(Namables):
 
     def __init__(self, qubit={}, blockNum=1, auxiliary={}):
         """
@@ -81,14 +81,6 @@ class QuantumCircuit():
             [[''] * blockNum] * (len(qubit) + len(auxiliary)),
             dtype=object
             )
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name=''):
-        self._name = name
 
     @property
     def qubitDict(self):
