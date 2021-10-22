@@ -8,14 +8,14 @@ for set / get vs IDE:
 @author: Alaster
 """
 
+# import TemplateModule as tpm
+from . import TemplateModule as tpm
 import numpy as np
 from copy import deepcopy
-
 from .ShapeModule import parse, setFunc
-from .TemplateModule import GenericWave, Comparables, Namables, axis, draw
 
 
-class Wave(GenericWave):
+class Wave(tpm.GenericWave):
 
     def __init__(self, generator=None, properties={}):
         """
@@ -46,6 +46,7 @@ class Wave(GenericWave):
             self._appendRule = temp['appendRule']
             return
         self._x, self._y, self._name, self._appendRule = parse(generator)
+        
 
     @property
     def appendRule(self):
@@ -319,7 +320,7 @@ class Wave(GenericWave):
         return Wave(properties=properties)
 
 
-class Waveform(GenericWave):
+class Waveform(tpm.GenericWave):
 
     def __init__(self, waveObjList=[], name=''):
         """
@@ -869,7 +870,7 @@ class Waveform(GenericWave):
             raise TypeError("Incorrect data type")
 
 
-class QubitChannel(Comparables, Namables):
+class QubitChannel(tpm.GenericWave):
 
     def __init__(self, *waveforms):
         """
@@ -934,14 +935,14 @@ class QubitChannel(Comparables, Namables):
                 '' for i in range(len(self._wire_names) - len(nameList))
                 ]
 
-    def __getitem__(self, wire_name):
+    def get_wire(self, wire_name=''):
         """
         Get Waveform object from specified wirename.
 
         Parameters
         ----------
-        wire_name : string/int
-            Name or index of the wire.
+        wire_name : string, optional
+            Name of the wire. The default is ''.
 
         Returns
         -------
@@ -949,9 +950,8 @@ class QubitChannel(Comparables, Namables):
             Corresponding Waveform object.
 
         """
-        if isinstance(wire_name, str):
-            wire_name = self._wire_names.index(wire_name)
-        return self._wires[wire_name]
+        idx = self._wire_names.index(wire_name)
+        return self._wires[idx]
 
     def __str__(self):
         """
@@ -1125,12 +1125,12 @@ class QubitChannel(Comparables, Namables):
             wire_indices = range(len(self._wires))
         ydict_list = [{}] * len(wire_indices)
         for idx, i in zip(wire_indices, range(len(wire_indices))):
-            ydict_list[i] = axis(
+            ydict_list[i] = tpm.axis(
                 self._wire_names[idx], 'amplitude', self._wires[idx].y, False
                 )
         if not figure_name:
             figure_name = self.name
-        return draw(
+        return tpm.draw(
             self.xaxis, ydict_list, figure_name=figure_name, size=size,
             allInOne=allInOne, toByteStream=toByteStream,
             showSizeInfo=showSizeInfo
@@ -1260,3 +1260,7 @@ class QubitChannel(Comparables, Namables):
             return qcObj
         else:
             raise TypeError("Incorrect data type")
+
+
+if __name__ == '__main__':
+    pass

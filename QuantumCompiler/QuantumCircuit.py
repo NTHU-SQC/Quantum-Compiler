@@ -18,17 +18,18 @@ Bug:
 """
 
 import numpy as np
+# from WaveModule import QubitChannel
+# from TemplateModule import save, load, simple_scrollable_window
+from .WaveModule import QubitChannel
+from .TemplateModule import save, load, simple_scrollable_window
 from copy import deepcopy
-from tkinter import Label, Button
+from tkinter import Label
 from PIL import ImageTk, Image
 
-from .WaveModule import QubitChannel
-from .TemplateModule import simple_scrollable_window, Namables
 
+class QuantumCircuit(object):
 
-class QuantumCircuit(Namables):
-
-    def __init__(self, qubit={}, blockNum=1, auxiliary={}):
+    def __init__(self, qubit={}, blockNum=1, readout={}):
         """
         Create a timeline of quantum circuit diagram.
 
@@ -41,14 +42,14 @@ class QuantumCircuit(Namables):
             The default is {}.
         blockNum : int, optional
             Number of time indices. The default is 1.
-        auxiliary : dict/list, optional
-            Similar to qubit for special purposes. The index order can be mixed
-            with qubit in dict mode while the in list mode the index order is
-            always later than qubit ones. The default is {}.
+        readout : dict/list, optional
+            Similar to qubit for special readout purposes. The index order can
+            be mixed with qubit in dict mode while the in list mode the index
+            order is always later than qubit ones. The default is {}.
 
         """
         self.diagram = np.asarray(
-            [[np.nan] * blockNum] * (len(qubit) + len(auxiliary)),
+            [[np.nan] * blockNum] * (len(qubit) + len(readout)),
             dtype=object
             )
         # check datatype and assign
@@ -58,37 +59,41 @@ class QuantumCircuit(Namables):
             self._qubitDict = qubit
         else:
             raise TypeError('qubitDict: Unsupported format')
-        if isinstance(auxiliary, list):
+        if isinstance(readout, list):
             used_idx = [val for _, val in self._qubitDict.items()]
             unused_idx = sorted([
-                val for val in range(len(auxiliary) + len(qubit))
+                val for val in range(len(readout) + len(qubit))
                 if val not in used_idx
                 ])
-            self._auxiliaryDict = dict(zip(auxiliary, unused_idx))
-        elif isinstance(auxiliary, dict):
-            self._auxiliaryDict = auxiliary
+            self._readoutDict = dict(zip(readout, unused_idx))
+        elif isinstance(readout, dict):
+            self._readoutDict = readout
         else:
-            raise TypeError('auxiliaryDict: Unsupported format')
+            raise TypeError('readoutDict: Unsupported format')
         # index check
-        for key, val in {**self._qubitDict, **self._auxiliaryDict}.items():
+        for key, val in {**self._qubitDict, **self._readoutDict}.items():
             if val >= len(self.diagram[:, 0]):
                 raise ValueError(
                     f'QubitChannel \'{key}\' assignment out of bound with ' +
                     f'index: {val}'
                         )
         self._name = ''
-        self.gateName = np.asarray(
-            [[''] * blockNum] * (len(qubit) + len(auxiliary)),
-            dtype=object
-            )
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name=''):
+        self._name = name
 
     @property
     def qubitDict(self):
         return self._qubitDict
 
     @property
-    def auxiliaryDict(self):
-        return self._auxiliaryDict
+    def readoutDict(self):
+        return self._readoutDict
 
     def assign(self, gateObj, mapping):
         """
@@ -105,42 +110,37 @@ class QuantumCircuit(Namables):
                     value is the corresponding indices in the circuit diagram.
                 list -> indices for single QubitChannel object assignment.
 
+        Returns
+        -------
+        None.
+
         """
         copied = deepcopy(gateObj)
-        width = len(self.diagram[:, 0])
         if isinstance(mapping, dict):
-            # Gate assign mode
             for key, idx_tag in mapping.items():
                 qubitIdx = self.get_index(idx_tag[0])
                 blockNum = idx_tag[1] - len(self.diagram[0, :]) + 1
                 if blockNum > 0:
                     self.diagram = np.concatenate((
                         self.diagram, np.asarray(
-                            [[np.nan] * blockNum] * width, dtype=object
+                            [[np.nan] * blockNum] * len(self.diagram[:, 0])
                             )
                         ), axis=1)
-                    self.gateName = np.concatenate((
-                        self.gateName, np.asarray(
-                            [[''] * blockNum] * width, dtype=object
-                            )
-                        ), axis=1)
-                self.diagram[qubitIdx, idx_tag[1]] = copied.qubitDict[key]
-                self.gateName[qubitIdx, idx_tag[1]] = copied.name
+                self.diagram[qubitIdx, idx_tag[1]] = copied._qubitDict[key]
         else:
-            # QubitChannel assign mode
             qubitIdx = self.get_index(mapping[0])
             blockNum = mapping[1] - len(self.diagram[0, :]) + 1
             if blockNum > 0:
                 self.diagram = np.concatenate((
                     self.diagram, np.asarray(
-                        [[np.nan] * blockNum] * width, dtype=object
+                        [[np.nan] * blockNum] * len(self.diagram[:, 0])
                         )
                     ), axis=1)
             self.diagram[qubitIdx, mapping[1]] = copied
 
     def get_index(self, qubit_name):
         """
-        Get the index of the qubit/auxiliary according to its name.
+        Get the index of the qubit/readout according to its name.
 
         Parameters
         ----------
@@ -158,49 +158,32 @@ class QuantumCircuit(Namables):
         try:
             return self.qubitDict[qubit_name]
         except KeyError:
-            return self.auxiliaryDict[qubit_name]
+            return self.readoutDict[qubit_name]
 
-    def view(self, compiled=False, windowSize='800x600'):
+    def view(self, windowSize='800x600'):
         """
         Show the current diagram in grid plot.
 
         Parameters
         ----------
-        compiled : boolean, optional
-            Set True to view the compiled diagram, uncompiled one otherwise.
-            The default is False.
         windowSize : str, optional
             Window size that is specified in string. The default is '800x600'.
 
         """
-        # check if compiled and select diagram
-        if not hasattr(self, 'compiled'):
-            print('Warning: The object has not compiled yet')
-            print('Show the uncompiled diagram')
-            compiled = False
-        diagram = self.diagram
-        if compiled:
-            diagram = self.compildDiagram
-        # create vectorized functions
         f = np.vectorize(
             lambda x: x.__str__() if isinstance(x, QubitChannel) else str(
-                np.nan), otypes=[object]
+                np.nan
+                )
             )
-        g = np.vectorize(
-            lambda x: 'Gate: ' + x + '\n' if x else '', otypes=[object]
-            )
-        # convert the diagram into info strings
-        str1 = g(self.gateName)
-        str2 = f(diagram)
-        data = str1 + str2
-        namefield = np.array([['']] * len(diagram[:, 0]), dtype=object)
-        for key, val in {**self.qubitDict, **self.auxiliaryDict}.items():
+        data = f(self.diagram)
+        namefield = np.array([['']] * len(self.diagram[:, 0]), dtype=object)
+        for key, val in {**self.qubitDict, **self.readoutDict}.items():
             namefield[val] = key + f':{val}'
         data = np.hstack([namefield, data])
         timeindex = np.array(
-            [''] + list(range(len(diagram[0, :]))), dtype=object
+            [''] + list(range(len(self.diagram[0, :]))), dtype=object
             )
-        data = np.array(np.vstack([timeindex, data]), dtype=object)
+        data = np.array(np.vstack([timeindex, data]), dtype=str)
         # create a scrollable window
         _, fm, run = simple_scrollable_window(windowSize)
         for i, row in enumerate(data):
@@ -225,13 +208,9 @@ class QuantumCircuit(Namables):
             raise RuntimeError('The object has not compiled yet')
         # create a scrollable window
         _, fm, run = simple_scrollable_window(windowSize)
-        Button(
-            fm, text='View assignment', command=lambda: self.view(
-                compiled=True)
-            ).grid(row=0, column=0, columnspan=2)
-        count = 1
+        count = 0
         img_ref = []
-        for key, val in {**self.qubitDict, **self.auxiliaryDict}.items():
+        for key, val in {**self.qubitDict, **self.readoutDict}.items():
             Label(
                 fm, text=key + f':{val}', font='Consolas',
                 relief='solid', borderwidth=1
@@ -248,31 +227,27 @@ class QuantumCircuit(Namables):
             count += 1
         run()
 
-    def compile(self):
+    def compileCkt(self):
         """
         Compile the quantum circuit.
 
         """
-        self.compildDiagram = deepcopy(self.diagram)
         f = np.vectorize(lambda x: isinstance(x, QubitChannel))
-        table = f(self.compildDiagram)
+        table = f(self.diagram)
         col_bool = np.bitwise_or.reduce(table, axis=1)
         # filter nan in 'qubit' direction
         if not np.bitwise_and.reduce(col_bool):
             raise ValueError('Found unassigned qubit')
         # filter nan in 'time' direction
         row_bool = np.bitwise_or.reduce(table, axis=0)
-        diagram = self.compildDiagram[:, row_bool]
+        diagram = self.diagram[:, row_bool]
         table = table[:, row_bool]
         # align QubitChannel objects in the table column by column
         for time_idx in range(len(table[0, :])):
-            QubitChannel.alignQubitChannels(*diagram[
-                table[:, time_idx], time_idx
-                ])
-            # diagram[table[:, time_idx], time_idx
-            #         ] = QubitChannel.alignQubitChannels(
-            #             *diagram[table[:, time_idx], time_idx]
-            #             )
+            diagram[table[:, time_idx], time_idx
+                    ] = QubitChannel.alignQubitChannels(
+                        *diagram[table[:, time_idx], time_idx]
+                        )
         # replace nans with null QubitChannel objects
         for qubit_idx, row in enumerate(table):
             for time_idx, flag in enumerate(row):
@@ -290,7 +265,7 @@ class QuantumCircuit(Namables):
 
     def __matmul__(self, qubit):
         """
-        Get the compiled QubitChannel object y arrays with the specified name.
+        Return the compiled QubitChannel amplitude data y.
 
         Parameters
         ----------
@@ -300,48 +275,53 @@ class QuantumCircuit(Namables):
         Returns
         -------
         list
-            Return a list of y arrays of the compiled QubitChannel object.
+            List of y from each wire in the compiled QubitChannel object.
 
         """
-        return self.compiled[self.get_index(qubit)].y
+        if isinstance(qubit, str):
+            qubit = self.get_index(qubit)
+        return self.compiled[qubit].y
 
-    def __setitem__(self, idxTuple, item):
-        """
-        Assign the Gate/QubitChannel object to the specified index tuple. This
-        is an alternative form for assign() method. Note that this method only
-        can assign 1 QubitChannel object at a time.
+    @classmethod
+    def save(cls, *args):
+        save('.qckt', *args)
 
-        Parameters
-        ----------
-        idxTuple : tuple/list
-            Index tuple for the assignment on the diagram.
-        item : tuple/QubitChannel
-            Item to be assigned. For tuple (Gate) mode takes the form:
-                (Gate, qubit name)
+    @classmethod
+    def load(cls, *args):
+        return load('.qckt', *args)
 
-        """
-        qubit = self.get_index(idxTuple[0])
-        time = idxTuple[1]
-        if isinstance(item, tuple) or isinstance(item, list):
-            self.assign(item[0], {item[1]: (qubit, time)})
-        else:
-            self.assign(item, (qubit, time))
+"""
+if __name__ == '__main__':
+    
+    # from shape_functionV5 import gaussian, get_x
+    from ShapeModule import setFunc
+    from WaveModule import Wave, Waveform
+    from TemplateModule import GenericGate
+    a = Wave(setFunc('gaussian', {'peak_x': 5e-6, 'sigma':1e-6}, 10e-6))
+    b = Waveform(Waveform._nullBlock(a.span*2))
+    b1 = ~(b+b+~a)
+    b2 = ~(~a+b+~a+b)
+    c = ~b / ~a
+    b1.name = 'b1'
+    b2.name = 'b2'
+    c.name = 'c'
+    # c.plot(allInOne=True)
+    kk = QuantumCircuit({'a': 0, 'b': 3, 'CC': 1}, 10, ['readout'])
+    # kk = QuantumCircuit(['a', 'b', 'CC'], 10, ['readout'])
+    kk.assign(c, ('a', 0))
+    kk.assign(c, ('CC', 0))
+    kk.assign(b1, ('b', 8))
+    kk.assign(b2, ('b', 5))
+    z = GenericGate(c)
+    kk.assign(z, {'c': ('a', 11)})
+    kk.assign(z, {'c': ('readout', 10)})
+    kk.assign(z, {'c': ('readout', 9)})
+    kk.assign(z, {'c': ('readout', 8)})
 
-    def __getitem__(self, idxTuple):
-        """
-        Get QubitChannel object from diagram with specified index tuple.
-
-        Parameters
-        ----------
-        idxTuple : tuple/list
-            Index tuple for the diagram element accessing.
-
-        Returns
-        -------
-        QubitChannel
-            Corresponding QubitChannel object.
-
-        """
-        qubit = self.get_index(idxTuple[0])
-        time = idxTuple[1]
-        return self.diagram[qubit, time]
+    kk.view()
+    kk.compileCkt()
+    kk.plot()
+    # print(kk@'c')
+    kk.view()
+    pass
+"""
